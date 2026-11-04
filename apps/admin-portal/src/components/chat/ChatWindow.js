@@ -449,7 +449,7 @@ const ChatWindow = ({ tenantId, tenantName, contactName, roomType, roomId, onClo
           </Avatar>
           <Box>
             <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
-              {room?.fieldWorker?.name || contactName || 'Field Worker'}
+              {contactName || 'Field Worker'}
             </Typography>
             <Typography variant="caption" color="text.secondary">
               'Field Worker Chat' • Online

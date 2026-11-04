@@ -143,7 +143,7 @@ function Reports() {
     };
 
     fetchReports();
-  }, [filters,    tenants]); 
+  }, [filters]); 
 
   // AI Reports functions
   const fetchAiReports = async () => {
@@ -479,18 +479,6 @@ function Reports() {
   };
 
   
-  const handleTenantChange = (tenantId) => {
-    setSelectedTenant(tenantId);
-    setAllTenantsReports(false);
-    setPage(1);
-  };
-
-  const handleAllTenantsToggle = () => {
-    setAllTenantsReports(!false);
-    setSelectedTenant('');
-    setPage(1);
-  };
-
   const handleExportMenuClose = () => {
     setAnchorEl(null);
   };
@@ -1009,12 +997,9 @@ function Reports() {
             ))}
             {paginatedReports().length === 0 && (
               <tr>
-                <td colSpan={false && false ? 8 : 7} style={{ textAlign: 'center', padding: '24px', color: 'text.secondary' }}>
+                <td colSpan={7} style={{ textAlign: 'center', padding: '24px', color: 'text.secondary' }}>
                   <Typography variant="body2">
-                    {false && !'' && !false ? 
-                      'Please select a tenant or choose "Show All Tenants" to view reports.' :
-                      'No reports found.'
-                    }
+                    No reports found.
                   </Typography>
                 </td>
               </tr>
@@ -1040,16 +1025,10 @@ function Reports() {
             }}
           >
             <Typography variant="subtitle1" color="text.secondary" gutterBottom fontWeight={500}>
-              {false && !'' && !false ? 
-                'Select a tenant to view reports' :
-                'No reports found'
-              }
+              No reports found
             </Typography>
             <Typography variant="body2" color="text.secondary">
-              {false && !'' && !false ? 
-                'Please select a tenant from the dropdown above or choose "Show All Tenants".' :
-                'Try adjusting your filters or check back later.'
-              }
+              Try adjusting your filters or check back later.
             </Typography>
           </Paper>
         </Grid>
@@ -1092,27 +1071,6 @@ function Reports() {
                   <Typography variant="body2" color="text.secondary" fontSize="0.75rem">
                     {new Date(report.createdAt).toLocaleDateString()}
                   </Typography>
-                  
-                  {/* Show tenant info for super admin viewing all tenants */}
-                  {false && false && report.tenantInfo && (
-                    <Box sx={{ 
-                      mt: 1, 
-                      py: 0.5, 
-                      px: 1, 
-                      bgcolor: 'background.default',
-                      borderRadius: 0.5, 
-                      display: 'flex', 
-                      alignItems: 'center', 
-                      gap: 0.5,
-                      border: '1px solid',
-                      borderColor: 'divider',
-                    }}>
-                      <BusinessIcon sx={{ fontSize: '0.875rem', color: 'text.secondary' }} />
-                      <Typography variant="caption" sx={{ fontWeight: 500 }}>
-                        {report.tenantInfo.organizationName || report.tenantInfo.name}
-                      </Typography>
-                    </Box>
-                  )}
                 </Box>
                 
                 <Stack direction="row" spacing={1} sx={{ mb: 2 }}>
@@ -1517,73 +1475,6 @@ function Reports() {
             gap: 1.5,
           }}
         >
-          {/* Super Admin Tenant Selection */}
-          {false && (
-            <Box sx={{ mb: { xs: 2, md: 0 } }}>
-              <Typography variant="subtitle1" sx={{ mb: 1.5, fontWeight: 500 }}>
-                Tenant Reports
-              </Typography>
-              <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5} alignItems="center">
-                <FormControl size="small" sx={{ minWidth: 200, '& .MuiOutlinedInput-root': { borderRadius: 1 } }}>
-                  <InputLabel>Select Tenant</InputLabel>
-                  <Select
-                    value={''}
-                    label="Select Tenant"
-                    onChange={(e) => handleTenantChange(e.target.value)}
-                    disabled={false}
-                  >
-                    <MenuItem value="">
-                      <em>Choose a tenant...</em>
-                    </MenuItem>
-                    {(tenants || []).map((tenant) => (
-                      <MenuItem key={tenant._id} value={tenant._id}>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                          <BusinessIcon sx={{ fontSize: '0.875rem', color: 'text.secondary' }} />
-                          <Typography variant="body2">
-                            {tenant.organizationName || tenant.name}
-                          </Typography>
-                        </Box>
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-                
-                <Button
-                  variant={false ? 'outlined' : 'text'}
-                  size="small"
-                  onClick={handleAllTenantsToggle}
-                  sx={{
-                    borderColor: false ? 'primary.main' : 'transparent',
-                    color: false ? 'primary.main' : 'text.secondary',
-                    textTransform: 'none',
-                    fontWeight: 500,
-                    px: 2,
-                  }}
-                >
-                  {false ? 'Showing All Tenants' : 'Show All Tenants'}
-                </Button>
-              </Stack>
-              
-              {/* Current Selection Info */}
-              {('' || false) && (
-                <Box sx={{ 
-                  mt: 2, 
-                  p: 2, 
-                  bgcolor: theme.palette.mode === 'dark' ? 'rgba(37, 99, 235, 0.1)' : '#f0f9ff',
-                  borderRadius: 2, 
-                  border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(37, 99, 235, 0.3)' : '#bfdbfe'}`
-                }}>
-                  <Typography variant="body2" color="primary">
-                    {false 
-                      ? `📊 Showing reports from all ${(tenants || []).length} tenants`
-                      : `📋 Showing reports for: ${(tenants || []).find(t => t._id === '')?.organizationName || 'Selected Tenant'}`
-                    }
-                  </Typography>
-                </Box>
-              )}
-            </Box>
-          )}
-
           <Stack
             direction={{ xs: 'column', sm: 'row' }}
             spacing={1.5}
@@ -1677,67 +1568,6 @@ function Reports() {
           </Stack>
         </Box>
 
-        {/* Tenant Summary Stats for Super Admin */}
-        {false && false && reports.length > 0 && (
-          <Box sx={{ mb: 3 }}>
-            <Paper 
-              elevation={0}
-              sx={{ 
-                p: 2, 
-                borderRadius: 1, 
-                border: '1px solid',
-                borderColor: 'divider',
-              }}
-            >
-              <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 500 }}>
-                Summary
-              </Typography>
-              <Grid container spacing={2}>
-                <Grid item xs={12} sm={6} md={3}>
-                  <Box sx={{ display: 'flex', flexDirection: 'column' }}>
-                    <Typography variant="caption" color="text.secondary" sx={{ mb: 0.5 }}>
-                      Total Tenants
-                    </Typography>
-                    <Typography variant="h6" sx={{ fontWeight: 500 }}>
-                      {(tenants || []).length}
-                    </Typography>
-                  </Box>
-                </Grid>
-                <Grid item xs={12} sm={6} md={3}>
-                  <Box sx={{ display: 'flex', flexDirection: 'column' }}>
-                    <Typography variant="caption" color="text.secondary" sx={{ mb: 0.5 }}>
-                      Total Reports
-                    </Typography>
-                    <Typography variant="h6" sx={{ fontWeight: 500 }}>
-                      {reports.length}
-                    </Typography>
-                  </Box>
-                </Grid>
-                <Grid item xs={12} sm={6} md={3}>
-                  <Box sx={{ display: 'flex', flexDirection: 'column' }}>
-                    <Typography variant="caption" color="text.secondary" sx={{ mb: 0.5 }}>
-                      High Priority
-                    </Typography>
-                    <Typography variant="h6" sx={{ fontWeight: 500, color: 'error.main' }}>
-                      {reports.filter(r => r.severity === 'HIGH' || r.severity === 'CRITICAL').length}
-                    </Typography>
-                  </Box>
-                </Grid>
-                <Grid item xs={12} sm={6} md={3}>
-                  <Box sx={{ display: 'flex', flexDirection: 'column' }}>
-                    <Typography variant="caption" color="text.secondary" sx={{ mb: 0.5 }}>
-                      Pending
-                    </Typography>
-                    <Typography variant="h6" sx={{ fontWeight: 500 }}>
-                      {reports.filter(r => r.status === 'Pending').length}
-                    </Typography>
-                  </Box>
-                </Grid>
-              </Grid>
-            </Paper>
-          </Box>
-        )}
-
         {/* Active Filters */}
         <Box sx={{ mb: 2 }}>
           <Stack
@@ -1788,12 +1618,7 @@ function Reports() {
             >
               <CircularProgress size={40} thickness={4} sx={{ color: 'primary.main' }} />
               <Typography variant="body2" color="text.secondary">
-                {false && false 
-                  ? 'Loading reports from all tenants...' 
-                  : false && '' 
-                    ? `Loading reports for ${(tenants || []).find(t => t._id === '')?.organizationName || 'selected tenant'}...`
-                    : 'Loading reports...'
-                }
+                Loading reports...
               </Typography>
             </Box>
           ) : fetchError ? (
