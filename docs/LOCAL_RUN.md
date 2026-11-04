@@ -20,12 +20,16 @@ This document describes the exact start order, service URLs, credentials, manual
 
 Start services in separate terminal windows in the following order:
 
-### Step 1: MongoDB Daemon
-```powershell
-# Create data folder if not exists
-New-Item -ItemType Directory -Force -Path "D:\Desktop\Safestreet\.mongodb_data"
+### Step 1: MongoDB Daemon (Skip if already running as a Windows service)
+> **Note:** On Windows, MongoDB installer usually registers an automatic Windows service. If MongoDB is already running in the background, you do not need to run this command.
 
-# Run mongod
+To check if MongoDB is already running:
+```powershell
+Get-Service MongoDB
+```
+If it shows `Running`, skip to Step 2. Otherwise, start it manually:
+```powershell
+New-Item -ItemType Directory -Force -Path "D:\Desktop\Safestreet\.mongodb_data"
 & "C:\Program Files\MongoDB\Server\8.2\bin\mongod.exe" --dbpath "D:\Desktop\Safestreet\.mongodb_data" --bind_ip 127.0.0.1
 ```
 
