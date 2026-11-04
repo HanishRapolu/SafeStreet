@@ -60,22 +60,26 @@ export const SocketProvider = ({ children }) => {
       }
       
       // Determine the socket server URL
+      const hostUri = Constants.expoConfig?.hostUri || Constants.manifest?.debuggerHost;
+      const expoHost = hostUri ? hostUri.split(':')[0] : null;
+
       let socketUrl = process.env.EXPO_PUBLIC_SOCKET_URL;
-      if (!socketUrl) {
+      if (socketUrl && socketUrl.includes('localhost') && expoHost && expoHost !== 'localhost') {
+        socketUrl = socketUrl.replace('localhost', expoHost);
+      } else if (!socketUrl) {
         if (process.env.EXPO_PUBLIC_API_URL) {
           socketUrl = process.env.EXPO_PUBLIC_API_URL.replace(/\/api\/?$/, '');
-        } else {
-          const hostUri = Constants.expoConfig?.hostUri || Constants.manifest?.debuggerHost;
-          const expoHost = hostUri ? hostUri.split(':')[0] : null;
-          if (expoHost) {
-            socketUrl = `http://${expoHost}:5030`;
-          } else if (API_BASE_URL) {
-            socketUrl = API_BASE_URL.replace(/\/api\/?$/, '');
-          } else if (Platform.OS === 'android') {
-            socketUrl = 'http://10.0.2.2:5030';
-          } else {
-            socketUrl = 'http://localhost:5030';
+          if (socketUrl.includes('localhost') && expoHost && expoHost !== 'localhost') {
+            socketUrl = socketUrl.replace('localhost', expoHost);
           }
+        } else if (expoHost) {
+          socketUrl = `http://${expoHost}:5030`;
+        } else if (API_BASE_URL) {
+          socketUrl = API_BASE_URL.replace(/\/api\/?$/, '');
+        } else if (Platform.OS === 'android') {
+          socketUrl = 'http://10.0.2.2:5030';
+        } else {
+          socketUrl = 'http://localhost:5030';
         }
       }
       

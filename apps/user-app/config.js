@@ -7,13 +7,16 @@ const API_PORT = '5030';
 
 // Function to derive default API URL from environment or Expo dev host
 export const getDefaultApiUrl = () => {
-  if (process.env.EXPO_PUBLIC_API_URL) {
-    return process.env.EXPO_PUBLIC_API_URL;
-  }
-  
   const hostUri = Constants.expoConfig?.hostUri || Constants.manifest?.debuggerHost;
   const expoHost = hostUri ? hostUri.split(':')[0] : null;
 
+  if (process.env.EXPO_PUBLIC_API_URL) {
+    if (process.env.EXPO_PUBLIC_API_URL.includes('localhost') && expoHost && expoHost !== 'localhost') {
+      return process.env.EXPO_PUBLIC_API_URL.replace('localhost', expoHost);
+    }
+    return process.env.EXPO_PUBLIC_API_URL;
+  }
+  
   if (expoHost) {
     return `http://${expoHost}:${API_PORT}/api`;
   }
