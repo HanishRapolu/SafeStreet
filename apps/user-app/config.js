@@ -5,26 +5,45 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const API_PORT = '5030';
 
-// Function to derive default API URL from environment or Expo dev host
-export const getDefaultApiUrl = () => {
-  const hostUri = Constants.expoConfig?.hostUri || Constants.manifest?.debuggerHost;
-  const expoHost = hostUri ? hostUri.split(':')[0] : null;
-
-  if (process.env.EXPO_PUBLIC_API_URL) {
-    if (process.env.EXPO_PUBLIC_API_URL.includes('localhost') && expoHost && expoHost !== 'localhost') {
-      return process.env.EXPO_PUBLIC_API_URL.replace('localhost', expoHost);
+// Helper to extract the local dev server IP dynamically from Expo on any machine
+export const getDevServerHost = () => {
+  const hostUri =
+    Constants.expoConfig?.hostUri ||
+    Constants.manifest?.debuggerHost ||
+    Constants.manifest2?.extra?.expoClient?.hostUri;
+  
+  if (hostUri) {
+    const host = hostUri.split(':')[0];
+    if (host && host !== 'localhost' && host !== '127.0.0.1') {
+      return host;
     }
+  }
+  return null;
+};
+
+// Function to derive default API URL dynamically
+export const getDefaultApiUrl = () => {
+  // 1. If running on a physical device via Expo, dynamically derive the laptop's Wi-Fi IP
+  const devHost = getDevServerHost();
+  if (devHost) {
+    return `http://${devHost}:${API_PORT}/api`;
+  }
+
+  // 2. If an explicit production/custom URL is set in env, use it
+  if (
+    process.env.EXPO_PUBLIC_API_URL &&
+    !process.env.EXPO_PUBLIC_API_URL.includes('localhost') &&
+    !process.env.EXPO_PUBLIC_API_URL.includes('127.0.0.1')
+  ) {
     return process.env.EXPO_PUBLIC_API_URL;
   }
-  
-  if (expoHost) {
-    return `http://${expoHost}:${API_PORT}/api`;
-  }
 
+  // 3. Android emulator fallback (10.0.2.2 is host loopback for Android emulator)
   if (Platform.OS === 'android') {
     return `http://10.0.2.2:${API_PORT}/api`;
   }
 
+  // 4. Default localhost fallback (iOS simulator / Web)
   return `http://localhost:${API_PORT}/api`;
 };
 
@@ -50,13 +69,8 @@ export const testApiConnection = async (url, timeout = 5000) => {
 
 // Function to get the appropriate base URL
 export const getBaseUrl = async () => {
-  // If EXPO_PUBLIC_API_URL is set, prioritize it directly
-  if (process.env.EXPO_PUBLIC_API_URL) {
-    return process.env.EXPO_PUBLIC_API_URL;
-  }
-
   try {
-    // Try to get the stored custom URL next
+    // Try to get user-configured custom URL from settings if available
     const storedUrl = await AsyncStorage.getItem('custom_api_url');
     if (storedUrl) {
       console.log('Found custom API URL in storage:', storedUrl);
@@ -70,48 +84,11 @@ export const getBaseUrl = async () => {
     console.error('Error reading or testing API URLs:', error);
   }
 
-  // Derive from Expo host or local dev options
-  const defaultUrl = getDefaultApiUrl();
-  const hostUri = Constants.expoConfig?.hostUri || Constants.manifest?.debuggerHost;
-  const expoHost = hostUri ? hostUri.split(':')[0] : null;
-
-  const possibleUrls = [defaultUrl];
-  if (expoHost) {
-    possibleUrls.push(`http://${expoHost}:${API_PORT}/api`);
-  }
-  if (Platform.OS === 'android') {
-    possibleUrls.push(`http://10.0.2.2:${API_PORT}/api`);
-  }
-  possibleUrls.push(`http://localhost:${API_PORT}/api`);
-  possibleUrls.push(`http://127.0.0.1:${API_PORT}/api`);
-
-  // Remove duplicates
-  const uniqueUrls = [...new Set(possibleUrls)];
-
-  let baseUrl = null;
-  for (const url of uniqueUrls) {
-    try {
-      console.log('Trying API URL:', url);
-      const isReachable = await testApiConnection(url);
-      if (isReachable) {
-        console.log('Found reachable API URL:', url);
-        baseUrl = url;
-        break;
-      }
-    } catch (e) {
-      console.log('Failed testing URL:', url, e);
-    }
-  }
-
-  if (!baseUrl) {
-    baseUrl = defaultUrl;
-  }
-
-  console.log('Using API base URL:', baseUrl);
-  return baseUrl;
+  // Automatically derive from Expo dev host
+  return getDefaultApiUrl();
 };
 
-// Initial default resolved from EXPO_PUBLIC_API_URL or Expo dev host
+// Initial default resolved dynamically
 export let API_BASE_URL = getDefaultApiUrl();
 
 // Set a custom API URL (can be called from settings screen)
@@ -131,6 +108,7 @@ export const setCustomApiUrl = async (url) => {
 (async () => {
   try {
     API_BASE_URL = await getBaseUrl();
+    console.log('Initialized dynamic API_BASE_URL:', API_BASE_URL);
   } catch (error) {
     console.log('Error initializing API URL:', error);
   }

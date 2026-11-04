@@ -4,7 +4,7 @@ import Constants from 'expo-constants';
 import { io } from 'socket.io-client';
 import { useAuth } from './AuthContext';
 import { getAuthToken } from '../utils/auth';
-import { API_BASE_URL } from '../config';
+import { API_BASE_URL, getDevServerHost } from '../config';
 
 const SocketContext = createContext();
 // Singleton socket reference for external access
@@ -59,28 +59,17 @@ export const SocketProvider = ({ children }) => {
         socketInstance = null;
       }
       
-      // Determine the socket server URL
-      const hostUri = Constants.expoConfig?.hostUri || Constants.manifest?.debuggerHost;
-      const expoHost = hostUri ? hostUri.split(':')[0] : null;
-
-      let socketUrl = process.env.EXPO_PUBLIC_SOCKET_URL;
-      if (socketUrl && socketUrl.includes('localhost') && expoHost && expoHost !== 'localhost') {
-        socketUrl = socketUrl.replace('localhost', expoHost);
-      } else if (!socketUrl) {
-        if (process.env.EXPO_PUBLIC_API_URL) {
-          socketUrl = process.env.EXPO_PUBLIC_API_URL.replace(/\/api\/?$/, '');
-          if (socketUrl.includes('localhost') && expoHost && expoHost !== 'localhost') {
-            socketUrl = socketUrl.replace('localhost', expoHost);
-          }
-        } else if (expoHost) {
-          socketUrl = `http://${expoHost}:5030`;
-        } else if (API_BASE_URL) {
-          socketUrl = API_BASE_URL.replace(/\/api\/?$/, '');
-        } else if (Platform.OS === 'android') {
-          socketUrl = 'http://10.0.2.2:5030';
-        } else {
-          socketUrl = 'http://localhost:5030';
-        }
+      // Determine the socket server URL dynamically
+      const devHost = getDevServerHost();
+      let socketUrl;
+      if (devHost) {
+        socketUrl = `http://${devHost}:5030`;
+      } else if (process.env.EXPO_PUBLIC_SOCKET_URL && !process.env.EXPO_PUBLIC_SOCKET_URL.includes('localhost')) {
+        socketUrl = process.env.EXPO_PUBLIC_SOCKET_URL;
+      } else if (Platform.OS === 'android') {
+        socketUrl = 'http://10.0.2.2:5030';
+      } else {
+        socketUrl = 'http://localhost:5030';
       }
       
       console.log('Initializing new socket connection to:', socketUrl);
