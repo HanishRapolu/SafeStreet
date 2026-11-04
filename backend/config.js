@@ -5,13 +5,13 @@ require('dotenv').config();
 module.exports = {
   // Server configuration
   server: {
-    port: process.env.PORT || 3001,
+    port: process.env.PORT || 5030,
     env: process.env.NODE_ENV || 'development',
   },
   
   // Database configuration
   database: {
-    url: process.env.MONGODB_URI || 'mongodb://localhost:27017/safestreets',
+    url: process.env.MONGO_URI || process.env.MONGODB_URI || 'mongodb://localhost:27017/safestreets',
   },
   
   // JWT configuration
@@ -28,7 +28,7 @@ module.exports = {
   
   // AI Models server configuration
   aiModels: {
-    url: process.env.AI_MODELS_SERVER_URL || 'http://127.0.0.1:5000',
+    url: process.env.AI_SERVER_URL || process.env.AI_MODELS_SERVER_URL || 'http://127.0.0.1:5000',
     timeout: process.env.AI_REQUEST_TIMEOUT || 30000, // 30 seconds
   },
   

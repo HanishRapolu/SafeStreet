@@ -3,7 +3,7 @@ const mongoose = require('mongoose');
 const connectDB = async () => {
   try {
     // Check if MONGO_URI is defined
-    const mongoURI = process.env.MONGO_URI || 'mongodb://localhost:27017/safestreets';
+    const mongoURI = process.env.MONGO_URI || process.env.MONGODB_URI || 'mongodb://localhost:27017/safestreets';
     
     if (!mongoURI) {
       throw new Error('MongoDB URI is not defined. Please check your .env file.');

@@ -13,6 +13,7 @@ parent_dir = os.path.dirname(os.path.dirname(current_dir))
 sys.path.insert(0, parent_dir)
 
 from ..core.config import (
+    ENABLE_VIT,
     VIT_MODEL_PATH,
     YOLO_MODEL_PATH, 
     CNN_ROAD_CLASSIFIER_PATH,
@@ -46,6 +47,15 @@ class ModelManager:
     
     def _load_vit_model(self):
         """Load ViT model"""
+        if not ENABLE_VIT:
+            print("ℹ️ ViT model is disabled (ENABLE_VIT=false)")
+            self.models['vit'] = None
+            self.model_status['vit'] = {
+                'loaded': False,
+                'error': 'ViT model is disabled (ENABLE_VIT=false)',
+                'fallback': False
+            }
+            return
         try:
             from ..utils.predict import predict_from_base64, load_vit_model
             

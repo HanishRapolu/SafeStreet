@@ -12,7 +12,7 @@ const DamageReport = require('../models/DamageReport');
 const { sendMail } = require('../utils/emailService');
 
 // Connect to MongoDB
-mongoose.connect(process.env.MONGO_URI)
+mongoose.connect(process.env.MONGO_URI || process.env.MONGODB_URI)
   .then(() => console.log('MongoDB connected for daily updates'))
   .catch(err => {
     console.error('MongoDB connection error:', err);

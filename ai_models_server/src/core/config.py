@@ -22,6 +22,9 @@ CORS_ORIGINS = os.getenv('CORS_ORIGINS', '*').split(',')
 # API configuration
 API_VERSION = "2.0.0"
 
+# Model configuration
+ENABLE_VIT = os.getenv('ENABLE_VIT', 'false').lower() == 'true'
+
 # Model file paths
 VIT_MODEL_PATH = "models/vit_model.pt"
 YOLO_MODEL_PATH = "models/yolo_model.pt"

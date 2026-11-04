@@ -2,6 +2,11 @@ const { getCachedData, cacheData } = require('../utils/redisClient');
 
 const cacheMiddleware = (duration = 3600, keyGenerator = null) => {
   return async (req, res, next) => {
+    // If Redis is not enabled, bypass cache
+    if (process.env.REDIS_ENABLED !== 'true') {
+      return next();
+    }
+
     // Skip caching for non-GET requests
     if (req.method !== 'GET') {
       return next();

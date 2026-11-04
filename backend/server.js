@@ -28,7 +28,7 @@ dotenv.config();
 connectDB();
 
 // Initialize Redis connection
-getRedisClient().catch(err => {
+if (process.env.REDIS_ENABLED === 'true') getRedisClient().catch(err => {
   console.error('Failed to connect to Redis:', err);
   console.log('Server continues without Redis caching');
 });
@@ -85,5 +85,5 @@ app.use('/api/fieldworker/ai-chat', fieldWorkerAiChatRoutes);
 app.use('/api/access-requests', accessRequestRoutes);
 app.use('/api/admin', require('./routes/emailRoutes'));
 
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 5030;
 server.listen(PORT, '0.0.0.0', () => console.log(`🚀 Server running on port ${PORT}`));

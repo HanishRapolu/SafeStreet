@@ -4,7 +4,12 @@ const JWT_TOKEN_PREFIX = 'jwt:';
 const JWT_BLACKLIST_PREFIX = 'blacklist:jwt:';
 const DEFAULT_TOKEN_EXPIRY = 24 * 60 * 60; // 24 hours in seconds
 
+const isRedisEnabled = () => process.env.REDIS_ENABLED === 'true';
+
 const cacheUserToken = async (userId, token, expirySeconds = DEFAULT_TOKEN_EXPIRY) => {
+  if (!isRedisEnabled()) {
+    return true;
+  }
   try {
     // Store token with user ID for quick lookup
     const tokenKey = `${JWT_TOKEN_PREFIX}${token}`;
@@ -27,8 +32,10 @@ const cacheUserToken = async (userId, token, expirySeconds = DEFAULT_TOKEN_EXPIR
 };
 
 const getTokenFromCache = async (token) => {
+  if (!isRedisEnabled()) {
+    return null;
+  }
   try {
-
     // Check if token is blacklisted
     const isBlacklisted = await getCachedData(`${JWT_BLACKLIST_PREFIX}${token}`);
     if (isBlacklisted) {
@@ -47,6 +54,9 @@ const getTokenFromCache = async (token) => {
 };
 
 const invalidateUserTokens = async (userId) => {
+  if (!isRedisEnabled()) {
+    return true;
+  }
   try {
     // Get all tokens for this user
     const userKey = `${JWT_TOKEN_PREFIX}user:${userId}`;
@@ -69,6 +79,9 @@ const invalidateUserTokens = async (userId) => {
 };
 
 const invalidateToken = async (token) => {
+  if (!isRedisEnabled()) {
+    return true;
+  }
   try {
     const tokenKey = `${JWT_TOKEN_PREFIX}${token}`;
     const tokenData = await getCachedData(tokenKey);

@@ -2,8 +2,14 @@ const { createClient } = require('redis');
 
 let redisClient = null;
 
+const isRedisEnabled = () => process.env.REDIS_ENABLED === 'true';
+
 // Create Redis client singleton
 const getRedisClient = async () => {
+  if (!isRedisEnabled()) {
+    return null;
+  }
+
   if (!redisClient) {
     // Create a new Redis client
     redisClient = createClient({
@@ -26,8 +32,12 @@ const getRedisClient = async () => {
 
 // Cache data with expiry time
 const cacheData = async (key, data, expiry = 3600) => {
+  if (!isRedisEnabled()) {
+    return false;
+  }
   try {
     const client = await getRedisClient();
+    if (!client) return false;
     await client.set(key, JSON.stringify(data), { EX: expiry });
     return true;
   } catch (error) {
@@ -38,8 +48,12 @@ const cacheData = async (key, data, expiry = 3600) => {
 
 // Get cached data
 const getCachedData = async (key) => {
+  if (!isRedisEnabled()) {
+    return null;
+  }
   try {
     const client = await getRedisClient();
+    if (!client) return null;
     const data = await client.get(key);
     return data ? JSON.parse(data) : null;
   } catch (error) {
@@ -50,8 +64,12 @@ const getCachedData = async (key) => {
 
 // Delete cached data
 const deleteCachedData = async (key) => {
+  if (!isRedisEnabled()) {
+    return false;
+  }
   try {
     const client = await getRedisClient();
+    if (!client) return false;
     await client.del(key);
     return true;
   } catch (error) {
@@ -62,8 +80,12 @@ const deleteCachedData = async (key) => {
 
 // Clear all data with a pattern
 const clearCachePattern = async (pattern) => {
+  if (!isRedisEnabled()) {
+    return false;
+  }
   try {
     const client = await getRedisClient();
+    if (!client) return false;
     const keys = await client.keys(pattern);
     
     if (keys.length > 0) {

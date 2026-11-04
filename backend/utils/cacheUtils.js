@@ -1,6 +1,11 @@
 const { clearCachePattern } = require('../utils/redisClient');
 
+const isRedisEnabled = () => process.env.REDIS_ENABLED === 'true';
+
 const clearDamageReportCaches = async (tenantId) => {
+  if (!isRedisEnabled()) {
+    return true;
+  }
   try {
     // Clear all damage report related caches for the tenant
     if (tenantId) {
@@ -20,6 +25,9 @@ const clearDamageReportCaches = async (tenantId) => {
 };
 
 const clearSingleReportCache = async (reportId, tenantId) => {
+  if (!isRedisEnabled()) {
+    return true;
+  }
   try {
     // Clear cache for specific report
     if (tenantId) {

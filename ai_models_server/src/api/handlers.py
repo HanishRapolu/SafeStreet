@@ -28,7 +28,7 @@ from ..utils.image_utils import (
     create_mock_yolo_detection,
     save_image_from_base64
 )
-from ..core.config import UPLOAD_FOLDER, API_VERSION
+from ..core.config import UPLOAD_FOLDER, API_VERSION, ENABLE_VIT
 
 
 def handle_health_check():
@@ -46,6 +46,8 @@ def handle_predict_endpoint():
         return handle_preflight_request()
     
     print("📸 Prediction endpoint called")
+    if not ENABLE_VIT:
+        return create_error_response("ViT model is disabled (ENABLE_VIT=false). Prediction service unavailable.", 503)
     
     try:
         # Validate request
