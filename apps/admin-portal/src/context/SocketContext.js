@@ -34,7 +34,7 @@ export const SocketProvider = ({ children }) => {
     }
     
     console.log('Connecting to socket server...');
-    const backendUrl = process.env.REACT_APP_BACKEND_URL || 'http://localhost:5030';
+    const backendUrl = process.env.REACT_APP_SOCKET_URL || process.env.REACT_APP_BACKEND_URL || (process.env.REACT_APP_API_URL ? process.env.REACT_APP_API_URL.replace(/\/api\/?$/, '') : 'http://localhost:5030');
     console.log('Backend URL:', backendUrl);
 
     const newSocket = io(backendUrl, {
@@ -60,12 +60,6 @@ export const SocketProvider = ({ children }) => {
 
     newSocket.on('authenticated', (userInfo) => {
       console.log('Authenticated:', userInfo);
-      
-      // Join appropriate rooms based on user role
-      if (userInfo.role === 'super-admin') {
-        newSocket.emit('join_room', { room: 'super_admin' });
-        console.log('Joined super_admin room');
-      }
       
       // Join admin-specific room
       newSocket.emit('join_room', { room: `admin_${userInfo.id}` });

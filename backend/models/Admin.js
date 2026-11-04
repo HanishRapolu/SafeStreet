@@ -7,15 +7,13 @@ const AdminSchema = new mongoose.Schema({
   password: { type: String, required: true },
   role: {
     type: String,
-    enum: ['admin', 'super-admin', 'tenant-owner'],
+    enum: ['tenant-owner', 'admin'],
     default: 'admin'
   },
   tenant: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Tenant',
-    required: function() {
-      return this.role !== 'super-admin'; // Tenant is required except for super-admin
-    }
+    required: true
   },
   profile: {
     position: { type: String, default: 'Administrator' },

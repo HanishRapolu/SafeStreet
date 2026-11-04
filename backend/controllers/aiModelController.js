@@ -173,3 +173,69 @@ exports.analyzeWithYolo = async (req, res) => {
     });
   }
 };
+
+
+/**
+ * Analyze image using unified pipeline (Road classifier + YOLOv8)
+ */
+exports.analyzeImage = async (req, res) => {
+  try {
+    let base64Image;
+
+    if (req.file && req.file.buffer) {
+      base64Image = req.file.buffer.toString('base64');
+    } else if (req.body && req.body.image) {
+      base64Image = req.body.image.includes(',')
+        ? req.body.image.split(',')[1]
+        : req.body.image;
+    }
+
+    if (!base64Image) {
+      return res.status(400).json({
+        success: false,
+        message: 'No image file or image data provided'
+      });
+    }
+
+    try {
+      const response = await axios.post(`${AI_SERVER_URL}/analyze`, {
+        image: base64Image
+      }, {
+        timeout: 60000,
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        }
+      });
+
+      return res.status(200).json(response.data);
+    } catch (aiError) {
+      console.error('Error forwarding to AI server /analyze:', aiError.message);
+      if (
+        aiError.code === 'ECONNREFUSED' ||
+        aiError.code === 'ECONNABORTED' ||
+        aiError.code === 'ETIMEDOUT' ||
+        !aiError.response
+      ) {
+        return res.status(503).json({
+          success: false,
+          error: 'AI service unavailable',
+          message: 'AI server is not reachable or timed out. Please check if the AI models server is running.'
+        });
+      }
+
+      return res.status(aiError.response.status || 503).json({
+        success: false,
+        error: 'AI service error',
+        message: aiError.response.data?.message || aiError.message
+      });
+    }
+  } catch (error) {
+    console.error('Error in analyzeImage controller:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Server error during image analysis',
+      error: error.message
+    });
+  }
+};

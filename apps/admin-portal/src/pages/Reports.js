@@ -20,7 +20,6 @@ import ReportActions from '../components/reports/ReportActions';
 import AiReportsDialog from '../components/dashboard/AiReportsDialog';
 import CreateDamageReportDialog from '../components/dashboard/CreateDamageReportDialog';
 import { useAuth } from '../hooks/useAuth';
-import { useTenant } from '../context/TenantContext';
 import { api } from '../utils/api';
 import { API_BASE_URL, TOKEN_KEY, API_ENDPOINTS } from '../config/constants';
 
@@ -29,9 +28,7 @@ import { API_BASE_URL, TOKEN_KEY, API_ENDPOINTS } from '../config/constants';
 function Reports() {
   const theme = useTheme();
   const { user } = useAuth();
-  const { tenants } = useTenant();
-  const isSuperAdmin = user?.role === 'super-admin';
-  
+    
   // Define colors based on the theme
   const colors = {
     primary: theme.palette.primary.main,
@@ -48,9 +45,8 @@ function Reports() {
     }
   };
   
-  // Tenant selection state for super admin
-  const [selectedTenant, setSelectedTenant] = useState('');
-  const [allTenantsReports, setAllTenantsReports] = useState(false);
+  
+
   
   const [filters, setFilters] = useState({
     dateFrom: null,
@@ -123,39 +119,7 @@ function Reports() {
         let endpoint = '/damage/reports';
         let data = [];
 
-        // For super admin, fetch reports based on tenant selection
-        if (isSuperAdmin) {
-          if (selectedTenant) {
-            // Fetch reports for specific tenant
-            endpoint = `/admin/tenants/${selectedTenant}/reports`;
-            data = await api.get(endpoint);
-          } else if (allTenantsReports) {
-            // Fetch reports from all tenants
-            const tenantsData = tenants || [];
-            const reportPromises = tenantsData.map(async (tenant) => {
-              try {
-                const tenantReports = await api.get(`/admin/tenants/${tenant._id}/reports`);
-                return tenantReports.map(report => ({
-                  ...report,
-                  tenantInfo: {
-                    id: tenant._id,
-                    name: tenant.name,
-                    organizationName: tenant.organizationName
-                  }
-                }));
-              } catch (error) {
-                console.error(`Error fetching reports for tenant ${tenant.name}:`, error);
-                return [];
-              }
-            });
-            
-            const allReports = await Promise.all(reportPromises);
-            data = allReports.flat();
-          } else {
-            // No tenant selected, show empty or prompt to select
-            data = [];
-          }
-        } else {
+        if (true) {
           // Regular admin - use existing endpoint with filters
           const queryParams = new URLSearchParams();
           if (filters.dateFrom) queryParams.append('startDate', filters.dateFrom);
@@ -179,7 +143,7 @@ function Reports() {
     };
 
     fetchReports();
-  }, [filters, isSuperAdmin, selectedTenant, allTenantsReports, tenants]); 
+  }, [filters,    tenants]); 
 
   // AI Reports functions
   const fetchAiReports = async () => {
@@ -210,7 +174,7 @@ function Reports() {
 
   const fetchFieldWorkers = async () => {
     try {
-      // For non-super-admin users, the tenant ID should be automatically applied by the backend middleware
+      // Tenant ID is automatically applied by backend middlewaree
       const workers = await api.get(`${API_ENDPOINTS.FIELD_WORKERS}`);
       const workersData = Array.isArray(workers) ? workers : 
                          (workers.fieldWorkers || workers.workers || []);
@@ -514,7 +478,7 @@ function Reports() {
     setPage(1);
   };
 
-  // Tenant selection handlers for super admin
+  
   const handleTenantChange = (tenantId) => {
     setSelectedTenant(tenantId);
     setAllTenantsReports(false);
@@ -522,7 +486,7 @@ function Reports() {
   };
 
   const handleAllTenantsToggle = () => {
-    setAllTenantsReports(!allTenantsReports);
+    setAllTenantsReports(!false);
     setSelectedTenant('');
     setPage(1);
   };
@@ -936,7 +900,7 @@ function Reports() {
               <th style={{ padding: '8px 12px', fontWeight: 500, color: 'text.secondary', fontSize: '0.875rem', textAlign: 'left', borderBottom: '1px solid', borderBottomColor: 'divider' }}>
                 Report ID
               </th>
-              {isSuperAdmin && allTenantsReports && (
+              {false && false && (
                 <th style={{ padding: '8px 12px', fontWeight: 500, color: 'text.secondary', fontSize: '0.875rem', textAlign: 'left', borderBottom: '1px solid', borderBottomColor: 'divider' }}>
                   Tenant
                 </th>
@@ -986,7 +950,7 @@ function Reports() {
                     {report.reportId}
                   </Typography>
                 </td>
-                {isSuperAdmin && allTenantsReports && (
+                {false && false && (
                   <td style={{ padding: '8px 12px', fontSize: '0.875rem' }}>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                       <BusinessIcon sx={{ fontSize: '0.875rem', color: 'text.secondary' }} />
@@ -1045,9 +1009,9 @@ function Reports() {
             ))}
             {paginatedReports().length === 0 && (
               <tr>
-                <td colSpan={isSuperAdmin && allTenantsReports ? 8 : 7} style={{ textAlign: 'center', padding: '24px', color: 'text.secondary' }}>
+                <td colSpan={false && false ? 8 : 7} style={{ textAlign: 'center', padding: '24px', color: 'text.secondary' }}>
                   <Typography variant="body2">
-                    {isSuperAdmin && !selectedTenant && !allTenantsReports ? 
+                    {false && !'' && !false ? 
                       'Please select a tenant or choose "Show All Tenants" to view reports.' :
                       'No reports found.'
                     }
@@ -1076,13 +1040,13 @@ function Reports() {
             }}
           >
             <Typography variant="subtitle1" color="text.secondary" gutterBottom fontWeight={500}>
-              {isSuperAdmin && !selectedTenant && !allTenantsReports ? 
+              {false && !'' && !false ? 
                 'Select a tenant to view reports' :
                 'No reports found'
               }
             </Typography>
             <Typography variant="body2" color="text.secondary">
-              {isSuperAdmin && !selectedTenant && !allTenantsReports ? 
+              {false && !'' && !false ? 
                 'Please select a tenant from the dropdown above or choose "Show All Tenants".' :
                 'Try adjusting your filters or check back later.'
               }
@@ -1130,7 +1094,7 @@ function Reports() {
                   </Typography>
                   
                   {/* Show tenant info for super admin viewing all tenants */}
-                  {isSuperAdmin && allTenantsReports && report.tenantInfo && (
+                  {false && false && report.tenantInfo && (
                     <Box sx={{ 
                       mt: 1, 
                       py: 0.5, 
@@ -1554,7 +1518,7 @@ function Reports() {
           }}
         >
           {/* Super Admin Tenant Selection */}
-          {isSuperAdmin && (
+          {false && (
             <Box sx={{ mb: { xs: 2, md: 0 } }}>
               <Typography variant="subtitle1" sx={{ mb: 1.5, fontWeight: 500 }}>
                 Tenant Reports
@@ -1563,10 +1527,10 @@ function Reports() {
                 <FormControl size="small" sx={{ minWidth: 200, '& .MuiOutlinedInput-root': { borderRadius: 1 } }}>
                   <InputLabel>Select Tenant</InputLabel>
                   <Select
-                    value={selectedTenant}
+                    value={''}
                     label="Select Tenant"
                     onChange={(e) => handleTenantChange(e.target.value)}
-                    disabled={allTenantsReports}
+                    disabled={false}
                   >
                     <MenuItem value="">
                       <em>Choose a tenant...</em>
@@ -1585,23 +1549,23 @@ function Reports() {
                 </FormControl>
                 
                 <Button
-                  variant={allTenantsReports ? 'outlined' : 'text'}
+                  variant={false ? 'outlined' : 'text'}
                   size="small"
                   onClick={handleAllTenantsToggle}
                   sx={{
-                    borderColor: allTenantsReports ? 'primary.main' : 'transparent',
-                    color: allTenantsReports ? 'primary.main' : 'text.secondary',
+                    borderColor: false ? 'primary.main' : 'transparent',
+                    color: false ? 'primary.main' : 'text.secondary',
                     textTransform: 'none',
                     fontWeight: 500,
                     px: 2,
                   }}
                 >
-                  {allTenantsReports ? 'Showing All Tenants' : 'Show All Tenants'}
+                  {false ? 'Showing All Tenants' : 'Show All Tenants'}
                 </Button>
               </Stack>
               
               {/* Current Selection Info */}
-              {(selectedTenant || allTenantsReports) && (
+              {('' || false) && (
                 <Box sx={{ 
                   mt: 2, 
                   p: 2, 
@@ -1610,9 +1574,9 @@ function Reports() {
                   border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(37, 99, 235, 0.3)' : '#bfdbfe'}`
                 }}>
                   <Typography variant="body2" color="primary">
-                    {allTenantsReports 
+                    {false 
                       ? `📊 Showing reports from all ${(tenants || []).length} tenants`
-                      : `📋 Showing reports for: ${(tenants || []).find(t => t._id === selectedTenant)?.organizationName || 'Selected Tenant'}`
+                      : `📋 Showing reports for: ${(tenants || []).find(t => t._id === '')?.organizationName || 'Selected Tenant'}`
                     }
                   </Typography>
                 </Box>
@@ -1714,7 +1678,7 @@ function Reports() {
         </Box>
 
         {/* Tenant Summary Stats for Super Admin */}
-        {isSuperAdmin && allTenantsReports && reports.length > 0 && (
+        {false && false && reports.length > 0 && (
           <Box sx={{ mb: 3 }}>
             <Paper 
               elevation={0}
@@ -1824,10 +1788,10 @@ function Reports() {
             >
               <CircularProgress size={40} thickness={4} sx={{ color: 'primary.main' }} />
               <Typography variant="body2" color="text.secondary">
-                {isSuperAdmin && allTenantsReports 
+                {false && false 
                   ? 'Loading reports from all tenants...' 
-                  : isSuperAdmin && selectedTenant 
-                    ? `Loading reports for ${(tenants || []).find(t => t._id === selectedTenant)?.organizationName || 'selected tenant'}...`
+                  : false && '' 
+                    ? `Loading reports for ${(tenants || []).find(t => t._id === '')?.organizationName || 'selected tenant'}...`
                     : 'Loading reports...'
                 }
               </Typography>

@@ -2,10 +2,6 @@ const DamageReport = require('../models/DamageReport');
 
 // Middleware to enforce tenant isolation for damage reports
 const enforceDamageTenantIsolation = async (req, res, next) => {
-  // Skip for super admins
-  if (req.admin && req.admin.role === 'super-admin') {
-    return next();
-  }
   
   // If we have a tenantId from the ensureTenantIsolation middleware, use it
   if (req.tenantId) {

@@ -2,6 +2,9 @@
 Route handlers for AI Models Server
 """
 import traceback
+import io
+import base64
+from PIL import Image
 import random
 import time
 from flask import request, jsonify
@@ -133,59 +136,57 @@ def handle_summary_endpoint():
         
         print(f"🏗️  Generating summary for {location}, {damage_type}, {severity}, priority {priority}")
         
-        # Check if Gemini is available
-        if not model_manager.is_model_available('gemini'):
-            print("⚠️ Gemini model not available, using fallback")
-            # Generate fallback summary
-            fallback_summary = f"Road damage report for {location}: {damage_type} with {severity} severity. Priority level: {priority}. This is a fallback summary as the AI summary generator is not available."
+        # Try Gemini first (10s timeout)
+        summary = None
+        used_gemini = False
+        try:
+            from ..utils.gemini_utils import call_gemini_summary
+            summary = call_gemini_summary(location, damage_type, severity, priority, timeout=10)
+            if summary:
+                used_gemini = True
+                print("✅ Summary generated via Gemini API")
+        except Exception as gemini_err:
+            print(f"⚠️ Gemini call failed, falling back to template: {gemini_err}")
             
-            response_data = {
-                "summary": fallback_summary,
-                "message": "Fallback summary generated (Gemini not available)"
-            }
+        # Fallback to existing template if Gemini didn't return a summary
+        if not summary:
+            from ..utils.gemini_utils import generate_road_damage_summary_from_params
+            summary = generate_road_damage_summary_from_params(location, damage_type, severity, priority)
+            print("ℹ️ Generated summary using existing template fallback")
             
-            print(f"⏱️ Summary generation completed in {time.time() - start_time:.2f} seconds (fallback)")
-            return add_cors_headers(create_fallback_response(response_data))
-        
-        # Generate actual summary
-        generate_summary_func = model_manager.get_model('gemini')
-        summary = generate_summary_func(location, damage_type, severity, priority)
-        
         response_data = {
             "summary": summary,
-            "formatted_summary": summary,  # Keep original format with markdown
-            "summary_type": "professional",
+            "formatted_summary": summary,
+            "summary_type": "gemini" if used_gemini else "template",
             "message": "Professional summary generated successfully"
         }
         
-        print(f"✅ Summary generated successfully")
-        print(f"⏱️ Summary generation completed in {time.time() - start_time:.2f} seconds")
+        elapsed = time.time() - start_time
+        print(f"⏱️ Summary generation completed in {elapsed:.2f} seconds ({'Gemini' if used_gemini else 'Fallback Template'})")
         return add_cors_headers(create_success_response(response_data))
-        
+
     except Exception as e:
         elapsed_time = time.time() - start_time
         print(f"❌ Error in summary generation endpoint after {elapsed_time:.2f} seconds: {e}")
         traceback.print_exc()
         
-        # Generate a simple fallback summary
+        # Fallback summary on exception
         try:
             location = request.get_json().get('location', 'unknown location')
             damage_type = request.get_json().get('damageType', 'unknown damage')
             severity = request.get_json().get('severity', 'medium')
             priority = request.get_json().get('priority', 'medium')
-            
-            fallback_summary = f"Road damage report for {location}: {damage_type} with {severity} severity. Priority level: {priority}. This is a fallback summary due to an error."
+            from ..utils.gemini_utils import generate_road_damage_summary_from_params
+            fallback_summary = generate_road_damage_summary_from_params(location, damage_type, severity, priority)
             
             response_data = {
                 "summary": fallback_summary,
                 "message": "Fallback summary generated due to error",
                 "success": True
             }
-            
-            print(f"⏱️ Summary fallback completed in {time.time() - start_time:.2f} seconds")
             return add_cors_headers(create_fallback_response(response_data))
-        except:
-            return create_error_response(f"Server error generating summary: {str(e)}", 500)
+        except Exception:
+            return create_error_response(str(e), 500)
 
 
 def handle_yolo_detection_endpoint():
@@ -472,3 +473,92 @@ def handle_health_check():
     system_info["models"] = model_status
     
     return jsonify(system_info), 200
+
+
+def handle_analyze_endpoint():
+    """Handle unified road classification and YOLO damage detection analysis"""
+    if request.method == "OPTIONS":
+        return handle_preflight_request()
+    
+    print("🔍 Unified Analyze endpoint called")
+    
+    try:
+        # Validate request
+        is_valid, error_msg = validate_request_json(request)
+        if not is_valid:
+            return create_error_response(error_msg, 400)
+        
+        data = request.get_json()
+        is_valid, error_msg, clean_image_string = validate_image_data(data)
+        if not is_valid:
+            return create_error_response(error_msg, 400)
+        
+        # Decode image to PIL Image to get dimensions and pass to models
+        try:
+            img_bytes = base64.b64decode(clean_image_string)
+            image = Image.open(io.BytesIO(img_bytes)).convert("RGB")
+        except Exception as e:
+            return create_error_response(f"Failed to decode image: {str(e)}", 400)
+            
+        image_size = [image.width, image.height]
+        
+        # 1. Run road classifier
+        validate_func = model_manager.get_model('road_classifier')
+        if validate_func is None:
+            from ..utils.simple_road_classifier import validate_road_image
+            validate_func = validate_road_image
+            
+        road_result = validate_func(image)
+        is_road = bool(road_result.get("is_road", False))
+        road_confidence = float(road_result.get("confidence", 0.0))
+        
+        # If not a road, return success:true, isRoad:false and stop
+        if not is_road:
+            response_data = {
+                "isRoad": False,
+                "roadConfidence": road_confidence
+            }
+            return add_cors_headers(create_success_response(response_data, "Image is not a road"))
+
+        # 2. Run YOLO detection with the existing function
+        detect_func = model_manager.get_model('yolo')
+        if detect_func is None:
+            from ..utils.yolov8_utils import detect_road_damage
+            detect_func = detect_road_damage
+            
+        detection_result = detect_func(image)
+        raw_detections = detection_result.get("detections", [])
+        annotated_image = detection_result.get("annotated_image")
+        
+        # 3 & 4. Assess damage: enrich detections, find primary, compute severity & priority
+        from ..utils.damage_assessment import assess_damage
+        detections, primary, severity, priority = assess_damage(
+            raw_detections,
+            image.width,
+            image.height
+        )
+        
+        if annotated_image is None:
+            # Fallback to original image if no annotation was created
+            buf = io.BytesIO()
+            image.save(buf, format="JPEG")
+            annotated_image = base64.b64encode(buf.getvalue()).decode("utf-8")
+            
+        # 5. Returns {success, isRoad, roadConfidence, detections[], primary:{class, damageType, confidence}, severity, priority, annotated_image, imageSize}
+        response_data = {
+            "isRoad": True,
+            "roadConfidence": road_confidence,
+            "detections": detections,
+            "primary": primary,
+            "severity": severity,
+            "priority": priority,
+            "annotated_image": annotated_image,
+            "imageSize": image_size
+        }
+        
+        return add_cors_headers(create_success_response(response_data, "Analysis complete"))
+
+    except Exception as e:
+        print(f"❌ Error in analyze endpoint: {e}")
+        traceback.print_exc()
+        return create_error_response(str(e), 500)

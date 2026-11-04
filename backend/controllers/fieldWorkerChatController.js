@@ -12,13 +12,9 @@ const getAdminChatList = async (req, res) => {
     // Get the tenant ID that the field worker belongs to
     const tenantId = fieldWorker.tenant;
     
-    // Find all admins for this tenant plus super-admins
-    const admins = await Admin.find({ 
-      $or: [
-        { tenant: tenantId },
-        { role: 'super-admin' }
-      ]
-    }).select('_id name email role profileImage tenant createdAt');
+    // Find all admins for this tenant
+    const admins = await Admin.find({ tenant: tenantId })
+      .select('_id name email role profileImage tenant createdAt');
     
     // Get all chat rooms between this field worker and admins
     const chatRooms = await ChatRoom.find({
@@ -123,7 +119,7 @@ const getChatRoom = async (req, res) => {
     console.log('Creating chat room with fieldWorker:', fieldWorker._id, 'and admin:', admin._id);
     
     // Check if fieldWorker has access to this admin (tenant check)
-    if (admin.role !== 'super-admin' && admin.tenant.toString() !== fieldWorker.tenant.toString()) {
+    if (admin.tenant.toString() !== fieldWorker.tenant.toString()) {
       return res.status(403).json({ message: 'You do not have permission to chat with this admin' });
     }
     
@@ -161,7 +157,7 @@ const getChatRoom = async (req, res) => {
           userId: admin._id,
           userModel: 'Admin',
           name: admin.name,
-          role: admin.role === 'super-admin' ? 'super_admin' : 'tenant_admin'
+          role: admin.role
         }
       ];
       
@@ -333,10 +329,6 @@ const sendMessage = async (req, res) => {
         req.io.to(`chat_${chatRoom._id}`).emit(eventName, messageObj);
         console.log(`Emitted to chat_${chatRoom._id}`);
         
-        // ALWAYS emit to super_admin room for visibility - this is crucial
-        req.io.to('super_admin').emit(eventName, messageObj);
-        console.log('Emitted to super_admin room');
-        
         // If admin has a tenant, emit to that tenant's room
         if (adminUser && adminUser.tenant) {
           const tenantId = adminUser.tenant.toString ? adminUser.tenant.toString() : adminUser.tenant;
@@ -370,7 +362,6 @@ const sendMessage = async (req, res) => {
         
         // Emit notification to all relevant targets
         req.io.to(`admin_${adminId}`).emit('chat_notification', notificationData);
-        req.io.to('super_admin').emit('chat_notification', notificationData);
         
         // Also send to all admins in the tenant if applicable
         if (fieldWorker.tenant) {

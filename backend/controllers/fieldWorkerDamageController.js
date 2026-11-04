@@ -1,3 +1,5 @@
+const { sendMail } = require('../utils/emailService');
+const Admin = require('../models/Admin');
 const mongoose = require('mongoose');
 const DamageReport = require('../models/DamageReport');
 const FieldWorker = require('../models/FieldWorker');
@@ -676,6 +678,66 @@ const uploadDamageReportByFieldWorker = async (req, res) => {
     const savedReport = await newAiReport.save();
     
     console.log('AI report saved successfully:', savedReport._id);
+
+    // Fire-and-forget email alert to all tenant admins on alert severity
+    const alertSeverities = (process.env.ALERT_SEVERITIES || 'HIGH')
+      .split(',')
+      .map(s => s.trim().toUpperCase());
+
+    if (alertSeverities.includes(savedReport.severity.toUpperCase())) {
+      (async () => {
+        try {
+          const tenantAdmins = await Admin.find({ tenant: tenantId }).select('email name');
+          const adminEmails = tenantAdmins.map(a => a.email).filter(Boolean);
+
+          if (adminEmails.length > 0) {
+            const workerName = req.fieldWorker?.name || 'Field Worker';
+            const address = locationData.address || 'Address not specified';
+            
+            let coordStr = 'Not specified';
+            let mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`;
+            
+            if (locationData.coordinates && Array.isArray(locationData.coordinates) && locationData.coordinates.length === 2) {
+              const [lng, lat] = locationData.coordinates;
+              coordStr = `${lat}, ${lng}`;
+              mapsUrl = `https://www.google.com/maps?q=${lat},${lng}`;
+            }
+
+            const subject = `[ALERT] ${damageType} reported at ${address}`;
+            const textBody = `A high-severity road damage report has been submitted.\n\n` +
+              `- Damage Type: ${damageType}\n` +
+              `- Address: ${address}\n` +
+              `- Severity: ${savedReport.severity}\n` +
+              `- Priority: ${savedReport.priority}\n` +
+              `- Coordinates: ${coordStr}\n` +
+              `- Google Maps: ${mapsUrl}\n` +
+              `- Reported By: ${workerName}\n`;
+
+            const htmlBody = `<h2>SafeStreets Damage Alert</h2>` +
+              `<p>A high-severity road damage report has been submitted by field worker <strong>${workerName}</strong>.</p>` +
+              `<ul>` +
+              `<li><strong>Damage Type:</strong> ${damageType}</li>` +
+              `<li><strong>Address:</strong> ${address}</li>` +
+              `<li><strong>Severity:</strong> <span style="color: red; font-weight: bold;">${savedReport.severity}</span></li>` +
+              `<li><strong>Priority:</strong> ${savedReport.priority}</li>` +
+              `<li><strong>Coordinates:</strong> ${coordStr}</li>` +
+              `<li><strong>Google Maps:</strong> <a href="${mapsUrl}">${mapsUrl}</a></li>` +
+              `<li><strong>Reported By:</strong> ${workerName}</li>` +
+              `</ul>`;
+
+            console.log(`Sending severity alert email to ${adminEmails.length} admin(s):`, adminEmails);
+            await sendMail({
+              to: adminEmails,
+              subject,
+              text: textBody,
+              html: htmlBody
+            });
+          }
+        } catch (emailErr) {
+          console.error('Error sending alert email to admins (fire-and-forget):', emailErr.message);
+        }
+      })();
+    }
 
     res.status(201).json({
       message: 'AI report submitted successfully',

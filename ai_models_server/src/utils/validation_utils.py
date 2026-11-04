@@ -29,12 +29,15 @@ def validate_image_data(data: dict) -> Tuple[bool, Optional[str], Optional[str]]
     if not image_string or not isinstance(image_string, str):
         return False, "Invalid image data format", None
     
+    # Strip data URI prefix if present
+    clean_string = image_string.split(',', 1)[1] if ',' in image_string else image_string
+    
     # Try to decode base64 to validate
     try:
-        image_data = base64.b64decode(image_string)
+        image_data = base64.b64decode(clean_string)
         # Try to open as image to validate format
         Image.open(io.BytesIO(image_data))
-        return True, None, image_string
+        return True, None, clean_string
     except Exception as e:
         return False, f"Invalid image format: {str(e)}", None
 

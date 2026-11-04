@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { Platform, AppState } from 'react-native';
+import Constants from 'expo-constants';
 import { io } from 'socket.io-client';
 import { useAuth } from './AuthContext';
 import { getAuthToken } from '../utils/auth';
@@ -59,10 +60,23 @@ export const SocketProvider = ({ children }) => {
       }
       
       // Determine the socket server URL
-      let socketUrl = API_BASE_URL;
-      // If the URL ends with /api, remove it to get the socket server URL
-      if (socketUrl.endsWith('/api')) {
-        socketUrl = socketUrl.replace('/api', '');
+      let socketUrl = process.env.EXPO_PUBLIC_SOCKET_URL;
+      if (!socketUrl) {
+        if (process.env.EXPO_PUBLIC_API_URL) {
+          socketUrl = process.env.EXPO_PUBLIC_API_URL.replace(/\/api\/?$/, '');
+        } else {
+          const hostUri = Constants.expoConfig?.hostUri || Constants.manifest?.debuggerHost;
+          const expoHost = hostUri ? hostUri.split(':')[0] : null;
+          if (expoHost) {
+            socketUrl = `http://${expoHost}:5030`;
+          } else if (API_BASE_URL) {
+            socketUrl = API_BASE_URL.replace(/\/api\/?$/, '');
+          } else if (Platform.OS === 'android') {
+            socketUrl = 'http://10.0.2.2:5030';
+          } else {
+            socketUrl = 'http://localhost:5030';
+          }
+        }
       }
       
       console.log('Initializing new socket connection to:', socketUrl);

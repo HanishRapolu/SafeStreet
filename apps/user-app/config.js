@@ -3,9 +3,27 @@ import { Platform } from 'react-native';
 import Constants from 'expo-constants';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const MANUAL_OVERRIDE_IP = '192.168.23.177'; 
 const API_PORT = '5030';
-const PRODUCTION_API_URL = 'https://safestreets-backend.onrender.com/api';
+
+// Function to derive default API URL from environment or Expo dev host
+export const getDefaultApiUrl = () => {
+  if (process.env.EXPO_PUBLIC_API_URL) {
+    return process.env.EXPO_PUBLIC_API_URL;
+  }
+  
+  const hostUri = Constants.expoConfig?.hostUri || Constants.manifest?.debuggerHost;
+  const expoHost = hostUri ? hostUri.split(':')[0] : null;
+
+  if (expoHost) {
+    return `http://${expoHost}:${API_PORT}/api`;
+  }
+
+  if (Platform.OS === 'android') {
+    return `http://10.0.2.2:${API_PORT}/api`;
+  }
+
+  return `http://localhost:${API_PORT}/api`;
+};
 
 // Function to validate URL and check if it's reachable
 export const testApiConnection = async (url, timeout = 5000) => {
@@ -29,95 +47,69 @@ export const testApiConnection = async (url, timeout = 5000) => {
 
 // Function to get the appropriate base URL
 export const getBaseUrl = async () => {
-  try {
-    // Try the production URL first
-    const isProductionReachable = await testApiConnection(PRODUCTION_API_URL);
-    if (isProductionReachable) {
-      console.log('Production API URL is reachable');
-      return PRODUCTION_API_URL;
-    } else {
-      console.log('Production API URL is not reachable, checking alternatives');
-    }
+  // If EXPO_PUBLIC_API_URL is set, prioritize it directly
+  if (process.env.EXPO_PUBLIC_API_URL) {
+    return process.env.EXPO_PUBLIC_API_URL;
+  }
 
+  try {
     // Try to get the stored custom URL next
     const storedUrl = await AsyncStorage.getItem('custom_api_url');
     if (storedUrl) {
       console.log('Found custom API URL in storage:', storedUrl);
-      
-      // Test if the stored URL is reachable
       const isReachable = await testApiConnection(storedUrl);
       if (isReachable) {
         console.log('Custom API URL is reachable');
         return storedUrl;
-      } else {
-        console.log('Custom API URL is not reachable, falling back to default');
       }
     }
   } catch (error) {
     console.error('Error reading or testing API URLs:', error);
   }
 
-  // Get the Expo host URL when running in Expo Go
-  const debuggerHost = Constants.expoConfig?.hostUri || Constants.manifest?.debuggerHost;
-  const expoHost = debuggerHost ? debuggerHost.split(':')[0] : null;
-  
-  let baseUrl;
+  // Derive from Expo host or local dev options
+  const defaultUrl = getDefaultApiUrl();
+  const hostUri = Constants.expoConfig?.hostUri || Constants.manifest?.debuggerHost;
+  const expoHost = hostUri ? hostUri.split(':')[0] : null;
 
-  if (__DEV__) {
-    // Array of possible URLs to try
-    const possibleUrls = [];
-    
-    if (Platform.OS === 'android') {
-      if (expoHost) {
-        possibleUrls.push(`http://${expoHost}:${API_PORT}/api`);  // Use the Expo debug IP
-      } 
-      possibleUrls.push(`http://${MANUAL_OVERRIDE_IP}:${API_PORT}/api`); // Fallback to manual IP
-      possibleUrls.push(`http://10.0.2.2:${API_PORT}/api`); // Android emulator localhost
-    } else {
-      if (expoHost) {
-        possibleUrls.push(`http://${expoHost}:${API_PORT}/api`);  // Expo host
+  const possibleUrls = [defaultUrl];
+  if (expoHost) {
+    possibleUrls.push(`http://${expoHost}:${API_PORT}/api`);
+  }
+  if (Platform.OS === 'android') {
+    possibleUrls.push(`http://10.0.2.2:${API_PORT}/api`);
+  }
+  possibleUrls.push(`http://localhost:${API_PORT}/api`);
+  possibleUrls.push(`http://127.0.0.1:${API_PORT}/api`);
+
+  // Remove duplicates
+  const uniqueUrls = [...new Set(possibleUrls)];
+
+  let baseUrl = null;
+  for (const url of uniqueUrls) {
+    try {
+      console.log('Trying API URL:', url);
+      const isReachable = await testApiConnection(url);
+      if (isReachable) {
+        console.log('Found reachable API URL:', url);
+        baseUrl = url;
+        break;
       }
-      possibleUrls.push(`http://${MANUAL_OVERRIDE_IP}:${API_PORT}/api`); // Manual override IP
-      possibleUrls.push(`http://localhost:${API_PORT}/api`); // Local development
-      possibleUrls.push(`http://127.0.0.1:${API_PORT}/api`); // Another localhost option
+    } catch (e) {
+      console.log('Failed testing URL:', url, e);
     }
-    
-    // Try each URL until we find one that's reachable
-    for (const url of possibleUrls) {
-      try {
-        console.log('Trying API URL:', url);
-        const isReachable = await testApiConnection(url);
-        if (isReachable) {
-          console.log('Found reachable API URL:', url);
-          baseUrl = url;
-          break;
-        }
-      } catch (e) {
-        console.log('Failed testing URL:', url, e);
-      }
-    }
-    
-    // If none of the URLs worked, use the default
-    if (!baseUrl) {
-      console.warn('No reachable API URL found, using default');
-      if (Platform.OS === 'android') {
-        baseUrl = `http://${MANUAL_OVERRIDE_IP}:${API_PORT}/api`;
-      } else {
-        baseUrl = `http://localhost:${API_PORT}/api`;
-      }
-    }
-  } else {
-    // Production URL
-    baseUrl = PRODUCTION_API_URL;
+  }
+
+  if (!baseUrl) {
+    baseUrl = defaultUrl;
   }
 
   console.log('Using API base URL:', baseUrl);
   return baseUrl;
 };
 
-// This is the default URL configuration
-// It will be updated at runtime by getBaseUrl()
-export let API_BASE_URL = PRODUCTION_API_URL;
+// Initial default resolved from EXPO_PUBLIC_API_URL or Expo dev host
+export let API_BASE_URL = getDefaultApiUrl();
 
 // Set a custom API URL (can be called from settings screen)
 export const setCustomApiUrl = async (url) => {

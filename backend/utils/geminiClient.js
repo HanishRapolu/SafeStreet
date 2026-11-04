@@ -11,7 +11,7 @@ const chatHistory = new Map();
 // Maximum number of messages to keep in history
 const MAX_HISTORY_LENGTH = 20;
 
-async function generateChatResponse(userId, userMessage, userRole = 'user', modelName = 'gemini-1.5-flash') {
+async function generateChatResponse(userId, userMessage, userRole = 'user', modelName = config.gemini.defaultModel || 'gemini-2.5-flash') {
   try {
     // Get or initialize chat history for this user
     if (!chatHistory.has(userId)) {
@@ -34,7 +34,7 @@ async function generateChatResponse(userId, userMessage, userRole = 'user', mode
 
     // Set system instructions based on user role
     let systemInstruction;
-    if (userRole === 'admin' || userRole === 'super_admin') {
+    if (userRole === 'admin' || userRole === 'tenant-owner') {
       systemInstruction = `You are SafeStreets Professional AI Assistant, an expert consultant designed to assist administrators and municipal managers with road infrastructure management.
 
 Professional Guidelines:
@@ -147,7 +147,7 @@ Primary areas of assistance:
 async function analyzeRoadDamageImage(imageBase64, damageInfo) {
   try {
     const model = genAI.getGenerativeModel({ 
-      model: 'gemini-1.5-pro', 
+      model: config.gemini.proModel || 'gemini-2.5-pro', 
       generationConfig: {
         temperature: 0.2,
         topP: 0.95,

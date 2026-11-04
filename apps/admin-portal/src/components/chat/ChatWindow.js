@@ -449,10 +449,10 @@ const ChatWindow = ({ tenantId, tenantName, contactName, roomType, roomId, onClo
           </Avatar>
           <Box>
             <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
-              {user.role === 'super-admin' ? tenantName : (contactName || 'Super Administrator')}
+              {room?.fieldWorker?.name || contactName || 'Field Worker'}
             </Typography>
             <Typography variant="caption" color="text.secondary">
-              {user.role === 'super-admin' ? 'Tenant Admin Chat' : 'Support Chat'} • Online
+              'Field Worker Chat' • Online
             </Typography>
           </Box>
         </Box>
@@ -555,14 +555,14 @@ const ChatWindow = ({ tenantId, tenantName, contactName, roomType, roomId, onClo
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
                       <Typography variant="caption" sx={{ 
                         fontWeight: 600, 
-                        color: message.senderRole === 'super_admin' 
+                        color: message.senderRole === 'admin' || message.senderRole === 'tenant-owner' 
                           ? theme.palette.primary.main
                           : theme.palette.primary.main,
                       }}>
                         {renderSenderName(message.senderName)}
                       </Typography>
                       <Chip 
-                        label={message.senderRole === 'super_admin' ? 'Super Admin' : 'Tenant Admin'}
+                        label={message.senderRole === 'admin' || message.senderRole === 'tenant-owner' ? 'Super Admin' : 'Tenant Admin'}
                         size="small"
                         sx={{ 
                           height: 20, 

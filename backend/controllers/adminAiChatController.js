@@ -21,7 +21,7 @@ const createAiChat = async (req, res) => {
     const aiResponse = await generateChatResponse(
       admin._id.toString(),
       initialMessage,
-      admin.role === 'super-admin' ? 'super_admin' : 'admin'
+      'admin'
     );
     
     // Generate a more descriptive title for the chat
@@ -71,7 +71,7 @@ const getAdminAiChats = async (req, res) => {
   try {
     const { admin } = req;
     
-    // Apply tenant isolation for non-super-admin
+    // Apply tenant isolation
     const query = { 
       userId: admin._id,
       userModel: 'Admin'
@@ -144,7 +144,7 @@ const sendMessage = async (req, res) => {
     const aiResponse = await generateChatResponse(
       admin._id.toString(),
       message,
-      admin.role === 'super-admin' ? 'super_admin' : 'admin'
+      'admin'
     );
     
     // Add AI response to the chat

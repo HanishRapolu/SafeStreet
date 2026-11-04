@@ -80,11 +80,6 @@ const getFieldWorkers = async (req, res) => {
         // req.tenantId is set by the ensureTenantIsolation middleware
         let tenantFilter = req.tenantId ? { tenant: req.tenantId } : {};
         
-        // Skip tenant filter for super-admin
-        if (req.admin && req.admin.role === 'super-admin' && !req.query.tenant) {
-            // Super admin can see all field workers if no specific tenant is requested
-            tenantFilter = {};
-        }
         
         // Get all field workers
         const fieldWorkers = await FieldWorker.find(tenantFilter).select('-password');
@@ -133,11 +128,6 @@ const getFieldWorkerById = async (req, res) => {
         // req.tenantId is set by the ensureTenantIsolation middleware
         const tenantFilter = req.tenantId ? { tenant: req.tenantId } : {};
         
-        // Skip tenant filter for super-admin
-        if (req.admin && req.admin.role === 'super-admin' && !req.query.tenant) {
-            // Super admin can see any field worker
-            tenantFilter = {};
-        }
         
         const fieldWorker = await FieldWorker.findOne({ 
             workerId,
@@ -181,11 +171,6 @@ const getFieldWorkerAssignments = async (req, res) => {
         
         // Apply tenant filter
         const tenantFilter = req.tenantId ? { tenant: req.tenantId } : {};
-        
-        // Skip tenant filter for super-admin
-        if (req.admin && req.admin.role === 'super-admin' && !req.query.tenant) {
-            tenantFilter = {};
-        }
         
         // Find the field worker first to validate existence
         const fieldWorker = await FieldWorker.findOne({
@@ -276,11 +261,6 @@ const updateFieldWorker = async (req, res) => {
         // req.tenantId is set by the ensureTenantIsolation middleware
         let tenantFilter = req.tenantId ? { tenant: req.tenantId } : {};
         
-        // Skip tenant filter for super-admin
-        if (req.admin && req.admin.role === 'super-admin' && !req.query.tenant) {
-            // Super admin can update any field worker
-            tenantFilter = {};
-        }
 
         const fieldWorker = await FieldWorker.findOneAndUpdate(
             { 

@@ -65,13 +65,7 @@ const ChatRoomsList = ({ onSelectRoom, selectedRoomId }) => {
         }
       }
       
-      let rooms = [];
-      
-      if (user.role === 'super-admin') {
-        rooms = await chatService.getAllChatRooms();
-      } else {
-        rooms = await chatService.getTenantChatRooms();
-      }
+      const rooms = await chatService.getAllChatRooms();
       
       setChatRooms(rooms);
     } catch (err) {
@@ -99,19 +93,11 @@ const ChatRoomsList = ({ onSelectRoom, selectedRoomId }) => {
         ? (room.lastMessage?.message || '') 
         : (room.lastMessage || '');
         
-      if (user.role === 'super-admin') {
-        return (
-          room.tenantName?.toLowerCase().includes(searchLower) ||
-          room.fieldWorker?.name?.toLowerCase().includes(searchLower) ||
-          lastMessageText.toLowerCase().includes(searchLower)
-        );
-      } else {
-        return (
-          (room.contactName || 'Support Team').toLowerCase().includes(searchLower) ||
-          room.fieldWorker?.name?.toLowerCase().includes(searchLower) ||
-          lastMessageText.toLowerCase().includes(searchLower)
-        );
-      }
+      return (
+        room.fieldWorker?.name?.toLowerCase().includes(searchLower) ||
+        (room.contactName || '').toLowerCase().includes(searchLower) ||
+        lastMessageText.toLowerCase().includes(searchLower)
+      );
     });
   }, [chatRooms, searchTerm, user.role]);
 
@@ -240,10 +226,7 @@ const ChatRoomsList = ({ onSelectRoom, selectedRoomId }) => {
                           invisible={!room.isOnline}
                         >
                           <Avatar>
-                            {user.role === 'super-admin' ? 
-                              <AdminIcon /> : 
-                              <ChatIcon />
-                            }
+<ChatIcon />
                           </Avatar>
                         </Badge>
                       </ListItemAvatar>
@@ -258,10 +241,7 @@ const ChatRoomsList = ({ onSelectRoom, selectedRoomId }) => {
                               }}
                               noWrap
                             >
-                              {user.role === 'super-admin' 
-                                ? room.tenantName || 'Unnamed Tenant' 
-                                : room.contactName || 'Support Team'
-                              }
+{room.fieldWorker?.name || room.contactName || 'Field Worker'}
                             </Typography>
                             {unreadCount > 0 && (
                               <Badge 

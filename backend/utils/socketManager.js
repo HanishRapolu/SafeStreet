@@ -34,9 +34,7 @@ class SocketManager {
       // Handle authentication
       socket.on('authenticate', async (token) => {
         console.log('Authentication attempt for socket:', socket.id);
-        console.log('Token received:', typeof token, token ? 'has value' : 'is empty/null');
-        console.log('Handshake auth:', socket.handshake.auth);
-        clearTimeout(authTimeout); // Clear timeout on authentication attempt
+        clearTimeout(authTimeout);
         try {
           // Validate token format
           if (!token || typeof token !== 'string') {
@@ -58,7 +56,7 @@ class SocketManager {
                   id: user._id.toString(),
                   name: user.name,
                   role: 'field_worker',
-                  tenantId: user.tenant?.toString() || null,
+                  tenantId: user.tenant?._id?.toString() || user.tenant?.toString() || null,
                   userType: 'fieldworker'
                 };
 
@@ -79,33 +77,27 @@ class SocketManager {
                   socket.join(`chat_${userInfo.tenantId}`);
                 }
                 
-                // Join admin chat rooms for more reliable message delivery
-                const ChatRoom = require('../models/ChatRoom');
                 try {
-                  // Find all chat rooms this field worker is part of
                   const chatRooms = await ChatRoom.find({
                     'participants': {
                       $elemMatch: { userId: user._id, userModel: 'FieldWorker' }
                     }
                   });
                   
-                  // Join each chat room
                   for (const room of chatRooms) {
                     socket.join(`chat_${room._id}`);
                     
-                    // Also join direct admin chat rooms
                     const adminParticipant = room.participants.find(p => p.userModel === 'Admin');
                     if (adminParticipant && adminParticipant.userId) {
                       socket.join(`admin_${adminParticipant.userId.toString()}`);
                     }
                   }
-                } catch (err) {
-                  console.error('Error joining chat rooms for field worker:', err);
+                } catch (roomErr) {
+                  console.error('Error joining chat rooms for field worker:', roomErr);
                 }
 
                 socket.emit('authenticated', userInfo);
-                console.log(`Field Worker authenticated: ${userInfo.name}`);
-                return;
+                console.log(`Field worker authenticated: ${userInfo.name}`);
               }
             }
           } else if (decoded.adminId) {
@@ -116,7 +108,7 @@ class SocketManager {
                 id: user._id.toString(),
                 name: user.name,
                 role: user.role,
-                tenantId: user.tenant?._id?.toString() || null,
+                tenantId: user.tenant?._id?.toString() || user.tenant?.toString() || null,
                 userType: 'admin'
               };
 
@@ -130,36 +122,7 @@ class SocketManager {
               // Join admin-specific room
               socket.join(`admin_${userInfo.id}`);
 
-              // Join appropriate rooms
-              if (userInfo.role === 'super-admin') {
-                socket.join('super_admin');
-                console.log('Admin joined super_admin room');
-                
-                // Join all tenant chat rooms for super admin to receive all messages
-                try {
-                  const chatRooms = await ChatRoom.find({ isActive: true });
-                  for (const room of chatRooms) {
-                    if (room.tenantId) {
-                      socket.join(`chat_${room.tenantId}`);
-                      socket.join(`tenant_${room.tenantId}`);
-                    }
-                    socket.join(`chat_${room._id}`);
-                  }
-                  
-                  // Also join all possible field worker rooms
-                  const fieldWorkers = await FieldWorker.find({}).select('tenant');
-                  for (const fw of fieldWorkers) {
-                    if (fw.tenant) {
-                      socket.join(`tenant_fieldworkers_${fw.tenant}`);
-                      socket.join(`fieldworker_${fw._id}`);
-                    }
-                  }
-                  
-                  console.log(`Super admin joined ${chatRooms.length} chat rooms and ${fieldWorkers.length} field worker rooms`);
-                } catch (err) {
-                  console.error('Error joining rooms for super admin:', err);
-                }
-              } else if (userInfo.tenantId) {
+              if (userInfo.tenantId) {
                 socket.join(`chat_${userInfo.tenantId}`);
                 socket.join(`tenant_${userInfo.tenantId}`);
                 console.log(`Admin joined tenant rooms for ${userInfo.tenantId}`);
@@ -167,30 +130,6 @@ class SocketManager {
 
               socket.emit('authenticated', userInfo);
               console.log(`Admin authenticated: ${userInfo.name} (${userInfo.role})`);
-            }
-          } else {
-            // This might be a tenant token
-            user = await Tenant.findById(decoded.id);
-            if (user) {
-              const userInfo = {
-                id: user._id.toString(),
-                name: user.name,
-                role: 'tenant_admin',
-                tenantId: user._id.toString(),
-                userType: 'tenant'
-              };
-
-              // Store user-socket mapping
-              this.userSockets.set(userInfo.id, socket.id);
-              this.socketUsers.set(socket.id, userInfo);
-
-              socket.userId = userInfo.id;
-              socket.userInfo = userInfo;
-
-              socket.join(`chat_${userInfo.tenantId}`);
-
-              socket.emit('authenticated', userInfo);
-              console.log(`Tenant authenticated: ${userInfo.name} (${userInfo.role})`);
             }
           }
 
@@ -205,101 +144,69 @@ class SocketManager {
         }
       });
 
-      // Handle joining chat room for field worker
+      // Handle joining chat room
       socket.on('join_room', async (data) => {
         if (!socket.userInfo) {
           socket.emit('error', 'Not authenticated');
           return;
         }
         
-        // Join the requested room
         socket.join(data.room);
         console.log(`User ${socket.userInfo.name} joined room: ${data.room}`);
       });
       
       // Handle field worker typing notifications
-      socket.on('typing', async (data) => {
-        if (!socket.userInfo) {
-          socket.emit('error', 'Not authenticated');
-          return;
+      socket.on('fieldworker_typing', (data) => {
+        if (!socket.userInfo) return;
+        
+        console.log(`Field worker ${socket.userInfo.name} typing in room ${data.chatRoomId}`);
+        
+        if (data.adminId) {
+          this.io.to(`admin_${data.adminId}`).emit('user_typing', {
+            userId: socket.userInfo.id,
+            name: socket.userInfo.name,
+            isTyping: data.isTyping,
+            chatRoomId: data.chatRoomId
+          });
         }
         
-        if (socket.userInfo.userType === 'fieldworker' && data.adminId) {
-          // Emit typing notification to admin
-          this.io.to(`admin_${data.adminId}`).emit('field_worker_typing', {
-            fieldWorkerId: socket.userInfo.id,
-            userName: data.userName || socket.userInfo.name,
-            isTyping: data.isTyping
-          });
-        } else if (socket.userInfo.userType === 'admin' && data.fieldWorkerId) {
-          // Emit typing notification to field worker
-          this.io.to(`fieldworker_${data.fieldWorkerId}`).emit('admin_typing', {
-            adminId: socket.userInfo.id,
-            userName: data.userName || socket.userInfo.name,
-            isTyping: data.isTyping
+        if (data.chatRoomId) {
+          socket.to(`chat_${data.chatRoomId}`).emit('user_typing', {
+            userId: socket.userInfo.id,
+            name: socket.userInfo.name,
+            isTyping: data.isTyping,
+            chatRoomId: data.chatRoomId
           });
         }
       });
       
-      // Handle marking messages as read for field workers
-      socket.on('mark_as_read', async (data) => {
-        try {
-          if (!socket.userInfo) {
-            socket.emit('error', 'Not authenticated');
-            return;
-          }
-          
-          // Handle field worker marking admin messages as read
-          if (socket.userInfo.userType === 'fieldworker' && data.adminId) {
-            const fieldWorkerId = socket.userInfo.id;
-            
-            // Find the chat room between this field worker and the admin
-            const chatRoom = await ChatRoom.findOne({
-              participants: {
-                $all: [
-                  { $elemMatch: { userId: fieldWorkerId, userModel: 'FieldWorker' } },
-                  { $elemMatch: { userId: data.adminId, userModel: 'Admin' } }
-                ]
-              }
-            });
-            
-            if (chatRoom) {
-              await ChatMessage.updateMany(
-                { 
-                  chatId: chatRoom._id,
-                  senderId: data.adminId,
-                  senderModel: 'Admin',
-                  'readBy.userId': { $ne: fieldWorkerId }
-                },
-                { 
-                  $push: { 
-                    readBy: { 
-                      userId: fieldWorkerId,
-                      userModel: 'FieldWorker',
-                      readAt: new Date()
-                    } 
-                  } 
-                }
-              );
-              
-              // Broadcast to the admin that messages were read
-              this.io.to(`admin_${data.adminId}`).emit('messages_read_by_field_worker', {
-                fieldWorkerId,
-                adminId: data.adminId,
-                chatRoomId: chatRoom._id
-              });
-              
-              console.log(`Field worker ${fieldWorkerId} marked messages from admin ${data.adminId} as read`);
-            }
-          }
-        } catch (error) {
-          console.error('Error marking messages as read (field worker):', error);
+      // Handle admin typing notifications
+      socket.on('admin_typing', (data) => {
+        if (!socket.userInfo) return;
+        
+        console.log(`Admin ${socket.userInfo.name} typing to field worker ${data.fieldWorkerId}`);
+        
+        if (data.fieldWorkerId) {
+          this.io.to(`fieldworker_${data.fieldWorkerId}`).emit('user_typing', {
+            userId: socket.userInfo.id,
+            name: socket.userInfo.name,
+            isTyping: data.isTyping,
+            chatRoomId: data.chatRoomId
+          });
+        }
+        
+        if (data.chatRoomId) {
+          socket.to(`chat_${data.chatRoomId}`).emit('user_typing', {
+            userId: socket.userInfo.id,
+            name: socket.userInfo.name,
+            isTyping: data.isTyping,
+            chatRoomId: data.chatRoomId
+          });
         }
       });
-      
+
       // Add ping-pong for connection testing
       socket.on('ping_server', () => {
-        console.log(`Ping received from socket ${socket.id}`);
         socket.emit('pong_server', { timestamp: new Date().toISOString() });
       });
       
@@ -310,100 +217,15 @@ class SocketManager {
           return;
         }
 
-        // Check if admin has access to this chat
-        if (socket.userInfo.role !== 'super-admin' && socket.userInfo.tenantId !== tenantId) {
+        if (socket.userInfo.tenantId !== tenantId) {
           socket.emit('error', 'Access denied');
           return;
         }
 
         socket.join(`chat_${tenantId}`);
-        console.log(`User ${socket.userInfo.name} joined chat for tenant ${tenantId}`);
       });
 
-      // Handle sending messages
-      socket.on('send_message', async (data) => {
-        try {
-          if (!socket.userInfo) {
-            socket.emit('error', 'Not authenticated');
-            return;
-          }
-
-          const { tenantId, message, messageType = 'text', attachmentUrl } = data;
-
-          // Check if admin has access to this chat
-          if (socket.userInfo.role !== 'super-admin' && socket.userInfo.tenantId !== tenantId) {
-            socket.emit('error', 'Access denied');
-            return;
-          }
-
-          const chatId = `tenant_${tenantId}`;
-
-          // Create message
-          const chatMessage = new ChatMessage({
-            chatId,
-            senderId: socket.userInfo.id,
-            senderModel: 'Admin',
-            senderName: socket.userInfo.name,
-            senderRole: socket.userInfo.role === 'super-admin' ? 'super_admin' : 'tenant_admin',
-            message,
-            messageType,
-            attachmentUrl
-          });
-
-          await chatMessage.save();
-
-          // Update chat room with last message
-          await ChatRoom.findOneAndUpdate(
-            { tenantId },
-            {
-              lastMessage: {
-                message,
-                senderId: socket.userInfo.id,
-                senderName: socket.userInfo.name,
-                timestamp: new Date()
-              },
-              $inc: {
-                [`unreadCount.${socket.userInfo.role === 'super-admin' ? 'tenantAdmin' : 'superAdmin'}`]: 1
-              }
-            }
-          );
-
-          // Emit message to all users in the chat room
-          this.io.to(`chat_${tenantId}`).emit('new_message', {
-            ...chatMessage.toObject(),
-            timestamp: chatMessage.createdAt
-          });
-
-          // Emit notification to super admin if message is from tenant admin
-          if (socket.userInfo.role !== 'super-admin') {
-            this.io.to('super_admin').emit('chat_notification', {
-              tenantId,
-              tenantName: (await ChatRoom.findOne({ tenantId }))?.tenantName,
-              message,
-              senderName: socket.userInfo.name,
-              timestamp: new Date()
-            });
-          }
-
-        } catch (error) {
-          console.error('Error sending message:', error);
-          socket.emit('error', 'Failed to send message');
-        }
-      });
-
-      // Handle typing indicators
-      socket.on('typing', (data) => {
-        if (!socket.userInfo) return;
-        
-        const { tenantId, isTyping } = data;
-        socket.to(`chat_${tenantId}`).emit('user_typing', {
-          userId: socket.userInfo.id,
-          userName: socket.userInfo.name,
-          isTyping
-        });
-      });
-
-      // Handle direct_message event from client (backup for message delivery)
+      // Handle direct message from admin to field worker or vice versa
       socket.on('direct_message', async (messageData) => {
         try {
           if (!socket.userInfo) {
@@ -411,41 +233,27 @@ class SocketManager {
             return;
           }
           
-          console.log('Received direct_message:', messageData);
-          
-          // Forward the message to relevant rooms
-          if (messageData.adminId) {
-            this.io.to(`admin_${messageData.adminId}`).emit('new_message', messageData.message);
-            console.log(`Forwarded direct message to admin_${messageData.adminId}`);
-            
-            // Also send a notification
-            if (messageData.forceNotify) {
-              this.io.to(`admin_${messageData.adminId}`).emit('chat_notification', {
-                type: 'new_message',
-                senderId: messageData.message.senderId,
-                senderName: messageData.message.senderName || 'Field Worker',
-                message: messageData.message.message.length > 30 ? 
-                  `${messageData.message.message.substring(0, 30)}...` : 
-                  messageData.message.message,
-                timestamp: new Date()
-              });
+          if (messageData.recipientId) {
+            if (socket.userInfo.userType === 'admin') {
+              this.io.to(`fieldworker_${messageData.recipientId}`).emit('new_message', messageData.message);
+            } else {
+              this.io.to(`admin_${messageData.recipientId}`).emit('new_message', messageData.message);
             }
           }
           
-          // If we have info about tenant ID, notify all admins for this tenant
-          if (socket.userInfo.tenantId) {
-            this.io.to(`chat_${socket.userInfo.tenantId}`).emit('new_message', messageData.message);
-            console.log(`Forwarded direct message to chat_${socket.userInfo.tenantId}`);
+          if (messageData.chatRoomId) {
+            this.io.to(`chat_${messageData.chatRoomId}`).emit('new_message', messageData.message);
           }
           
-          // Also notify super admins
-          this.io.to('super_admin').emit('new_message', messageData.message);
+          if (socket.userInfo.tenantId) {
+            this.io.to(`chat_${socket.userInfo.tenantId}`).emit('new_message', messageData.message);
+          }
         } catch (error) {
           console.error('Error handling direct_message:', error);
         }
       });
       
-      // Handle manual message forwarding (backup for message delivery)
+      // Handle manual message forwarding
       socket.on('manual_message', async (messageData) => {
         try {
           if (!socket.userInfo) {
@@ -453,9 +261,6 @@ class SocketManager {
             return;
           }
           
-          console.log('Received manual_message:', messageData);
-          
-          // Forward the message to relevant rooms
           if (messageData.adminId) {
             this.io.to(`admin_${messageData.adminId}`).emit('new_message', messageData);
           }
@@ -464,7 +269,6 @@ class SocketManager {
             this.io.to(`chat_${messageData.chatRoomId}`).emit('new_message', messageData);
           }
           
-          // Also forward to tenant room if available
           if (socket.userInfo.tenantId) {
             this.io.to(`chat_${socket.userInfo.tenantId}`).emit('new_message', messageData);
           }
@@ -473,57 +277,12 @@ class SocketManager {
         }
       });
       
-      // Handle marking messages as read
-      socket.on('mark_read', async (tenantId) => {
-        try {
-          if (!socket.userInfo) return;
-
-          const chatId = `tenant_${tenantId}`;
-
-          // Mark messages as read
-          await ChatMessage.updateMany(
-            { 
-              chatId,
-              senderId: { $ne: socket.userInfo.id },
-              isRead: false
-            },
-            { 
-              isRead: true,
-              $push: {
-                readBy: {
-                  userId: socket.userInfo.id,
-                  readAt: new Date()
-                }
-              }
-            }
-          );
-
-          // Reset unread count for this user
-          const updateField = socket.userInfo.role === 'super-admin' ? 'unreadCount.superAdmin' : 'unreadCount.tenantAdmin';
-          await ChatRoom.findOneAndUpdate(
-            { tenantId },
-            { [updateField]: 0 }
-          );
-
-          // Notify other users that messages were read
-          socket.to(`chat_${tenantId}`).emit('messages_read', {
-            userId: socket.userInfo.id,
-            tenantId
-          });
-
-        } catch (error) {
-          console.error('Error marking messages as read:', error);
-        }
-      });
-
       // Handle disconnection
       socket.on('disconnect', () => {
         if (socket.userInfo) {
           this.userSockets.delete(socket.userInfo.id);
           this.socketUsers.delete(socket.id);
           console.log(`User disconnected: ${socket.userInfo.name}`);
-        } else {
-          console.log('Unknown user disconnected:', socket.id);
         }
       });
     });
@@ -535,11 +294,6 @@ class SocketManager {
     if (socketId) {
       this.io.to(socketId).emit('notification', notification);
     }
-  }
-
-  // Method to send notification to all super admins
-  sendNotificationToSuperAdmins(notification) {
-    this.io.to('super_admin').emit('notification', notification);
   }
 }
 

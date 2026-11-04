@@ -1,6 +1,6 @@
 import axios from 'axios';
 import { getAuthToken } from './auth';
-import { API_BASE_URL } from '../config';
+import { getBaseUrl as getConfigBaseUrl } from '../config';
 
 // Create a separate axios instance for chat API
 const chatAPI = axios.create();
@@ -10,42 +10,9 @@ let baseUrlInitialized = false;
 
 // Function to get the base URL - it may need to be determined at runtime
 const getBaseUrl = async () => {
-  // First try the configured base URL
-  if (API_BASE_URL && API_BASE_URL !== 'undefined') {
-    console.log('Using API_BASE_URL from config:', API_BASE_URL);
-    return API_BASE_URL;
-  }
-
-  // If not set, try multiple fallbacks
-  console.log('API_BASE_URL not set, trying fallbacks');
-  
-  // Try common local development URLs
-  const fallbackUrls = [
-    'http://192.168.23.177:5030/api', // Manual override
-    'http://localhost:5030/api',
-    'http://127.0.0.1:5030/api',
-    'http://10.0.2.2:5030/api' // For Android emulator
-  ];
-  
-  for (const url of fallbackUrls) {
-    try {
-      const response = await fetch(`${url}/health`, { 
-        method: 'GET',
-        timeout: 2000
-      });
-      if (response.ok) {
-        console.log(`Found working API at ${url}`);
-        return url;
-      }
-    } catch (err) {
-      console.log(`Failed to connect to ${url}:`, err.message);
-    }
-  }
-  
-  // Default fallback
-  console.warn('No working API found, using default');
-  return 'http://192.168.23.177:5030/api';
+  return await getConfigBaseUrl();
 };
+
 
 // Ensure the base URL is set
 const ensureBaseUrl = async () => {

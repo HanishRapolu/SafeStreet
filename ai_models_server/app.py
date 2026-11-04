@@ -6,6 +6,27 @@ import os
 import sys
 import time
 
+# Ensure writable AppData and Cache dirs inside workspace
+_workspace_appdata = os.path.join(os.path.dirname(os.path.abspath(__file__)), '.appdata')
+os.makedirs(os.path.join(_workspace_appdata, 'AppData', 'Roaming', 'Ultralytics'), exist_ok=True)
+os.makedirs(os.path.join(_workspace_appdata, 'matplotlib'), exist_ok=True)
+os.makedirs(os.path.join(_workspace_appdata, 'torch'), exist_ok=True)
+os.environ['APPDATA'] = os.path.join(_workspace_appdata, 'AppData', 'Roaming')
+os.environ['LOCALAPPDATA'] = os.path.join(_workspace_appdata, 'AppData', 'Local')
+os.environ['USERPROFILE'] = _workspace_appdata
+os.environ['HOME'] = _workspace_appdata
+os.environ['YOLO_CONFIG_DIR'] = os.path.join(_workspace_appdata, 'AppData', 'Roaming', 'Ultralytics')
+os.environ['MPLCONFIGDIR'] = os.path.join(_workspace_appdata, 'matplotlib')
+os.environ['TORCH_HOME'] = os.path.join(_workspace_appdata, 'torch')
+
+# Configure UTF-8 output on Windows
+if sys.platform == 'win32':
+    try:
+        sys.stdout.reconfigure(encoding='utf-8')
+        sys.stderr.reconfigure(encoding='utf-8')
+    except Exception:
+        pass
+
 # Add src directory to path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'src'))
 

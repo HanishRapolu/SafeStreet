@@ -132,7 +132,6 @@ For detailed documentation on various aspects of the project, please refer to:
 - [Mobile App Guide](./docs/mobile-app-guide.md) - User guide for field workers
 - [Admin Portal Guide](./docs/admin-portal-guide.md) - User guide for administrators
 - [Tenant Architecture](./docs/tenant-architecture.md) - Multi-tenant implementation details
-- [Super Admin Setup](./docs/super-admin-setup.md) - Instructions for setting up super admin accounts
 - [Mobile App Guide](./docs/mobile-app-guide.md) - Field worker app documentation
 - [Admin Portal Guide](./docs/admin-portal-guide.md) - Admin dashboard documentation
 - [AI Model Documentation](./docs/ai-model-documentation.md) - ML model details

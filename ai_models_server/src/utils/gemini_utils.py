@@ -14,7 +14,7 @@ import time
 import hashlib
 import functools
 
-from ..core.config import GOOGLE_API_KEY
+from ..core.config import GEMINI_API_KEY, GOOGLE_API_KEY, GEMINI_MODEL
 
 
 # Gemini API configuration
@@ -603,3 +603,79 @@ def generate_road_damage_summary_from_params(location: str, damage_type: str, se
         print(f"Error generating professional summary: {e}")
         traceback.print_exc()
         return f"Road damage report for {location}: {damage_type} with {severity} severity. Priority: {priority}. Professional inspection recommended."
+
+
+def call_gemini_summary(location: str, damage_type: str, severity: str, priority: str, timeout: int = 10) -> Optional[str]:
+    """
+    Call Gemini generateContent endpoint for summary generation with specified timeout.
+    Returns markdown summary string if successful, or None on missing key/error/timeout.
+    """
+    api_key = os.getenv('GEMINI_API_KEY') or os.getenv('GOOGLE_API_KEY') or GEMINI_API_KEY or GOOGLE_API_KEY
+    if not api_key:
+        return None
+        
+    model = os.getenv('GEMINI_MODEL') or GEMINI_MODEL or "gemini-2.5-flash"
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={api_key}"
+    
+    prompt = f"""You are a professional road maintenance and infrastructure engineering expert.
+Generate a professional Road Damage Assessment Report for municipal administrators with the following details:
+- Location: {location}
+- Damage Type: {damage_type}
+- Severity Level: {severity}
+- Priority Classification: {priority}
+
+You MUST follow this exact Markdown structure:
+
+## Road Damage Assessment Report
+
+**Location:** {location}
+**Damage Type:** {damage_type}
+**Severity Level:** {severity}
+**Priority Classification:** {priority}
+
+**Damage Analysis:**
+[Detailed engineering analysis of the damage, potential causes, and safety implications]
+
+**Recommended Actions:**
+1. [Action 1]
+2. [Action 2]
+3. [Action 3]
+4. [Action 4]
+
+**Planning Implications:**
+- [Planning, budget, or traffic impact point 1]
+- [Planning, budget, or traffic impact point 2]
+- [Planning, budget, or traffic impact point 3]
+
+This assessment is based on standardized classification protocols. Professional engineering inspection is recommended to confirm findings and finalize repair specifications for {location}.
+"""
+
+    payload = {
+        "contents": [{
+            "parts": [{"text": prompt}]
+        }],
+        "generationConfig": {
+            "temperature": 0.2,
+            "maxOutputTokens": 1000
+        }
+    }
+    
+    headers = {
+        "Content-Type": "application/json"
+    }
+    
+    try:
+        response = requests.post(url, headers=headers, json=payload, timeout=timeout)
+        if response.status_code == 200:
+            data = response.json()
+            candidates = data.get("candidates", [])
+            if candidates:
+                parts = candidates[0].get("content", {}).get("parts", [])
+                if parts and "text" in parts[0]:
+                    return parts[0]["text"].strip()
+        else:
+            print(f"Gemini API returned status {response.status_code}: {response.text[:200]}")
+    except Exception as e:
+        print(f"Gemini API request failed: {e}")
+        
+    return None

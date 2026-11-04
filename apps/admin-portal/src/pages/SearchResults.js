@@ -454,7 +454,7 @@ const SearchResults = () => {
                     </Typography>
                     <Button 
                       variant="text" 
-                      onClick={() => navigate('/field-workers')}
+                      onClick={() => navigate('/team')}
                       sx={{ fontWeight: 500 }}
                     >
                       View All Workers

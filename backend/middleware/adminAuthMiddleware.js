@@ -54,8 +54,8 @@ const protectAdmin = async (req, res, next) => {
 
     console.log('Admin authenticated:', admin.name, 'Role:', admin.role, 'Tenant:', admin.tenant?.name);
     
-    // Check if tenant is active (except for super-admin)
-    if (admin.role !== 'super-admin' && admin.tenant && !admin.tenant.active) {
+    // Check if tenant is active
+    if (admin.tenant && !admin.tenant.active) {
       return res.status(401).json({ message: 'Tenant account is inactive. Please contact the system administrator.' });
     }
     
@@ -78,21 +78,16 @@ const restrictTo = (...roles) => {
   };
 };
 
-// Ensure tenant data isolation
-const ensureTenantIsolation = (allowSuperAdmin = true) => {
+// Ensure tenant data isolation - always scopes to the admin's tenant
+const ensureTenantIsolation = () => {
   return (req, res, next) => {
-    // Allow super admin to access all data if specified
-    if (allowSuperAdmin && req.admin.role === 'super-admin') {
-      return next();
-    }
-    
     // Ensure the admin has a tenant assigned
-    if (!req.admin.tenant) {
+    if (!req.admin || !req.admin.tenant) {
       return res.status(403).json({ message: 'No tenant associated with this admin account.' });
     }
     
     // Add tenantId filter to all queries
-    req.tenantId = req.admin.tenant._id;
+    req.tenantId = req.admin.tenant._id || req.admin.tenant;
     next();
   };
 };

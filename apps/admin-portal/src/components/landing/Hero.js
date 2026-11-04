@@ -220,7 +220,7 @@ const Hero = ({ isAuthenticated }) => {
                   <Button
                     variant="outlined"
                     size="large"
-                    onClick={() => navigate('/request-access')}
+                    onClick={() => navigate('/login')}
                     sx={{
                       px: 4,
                       py: 1.5,
@@ -242,7 +242,7 @@ const Hero = ({ isAuthenticated }) => {
                       },
                     }}
                   >
-                    Request Access
+                    Login
                   </Button>
                 </Box>
               </Box>

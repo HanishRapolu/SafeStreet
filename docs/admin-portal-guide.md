@@ -27,11 +27,11 @@ http://your-server-address:3000
 
 ## Tenant Management
 
-The tenant management system allows super-administrators to create and manage multiple tenants in the SafeStreets system.
+The tenant management system allows tenant administrators to create and manage multiple tenants in the SafeStreets system.
 
 ### Creating a New Tenant
 
-1. From the super-admin dashboard, navigate to "Tenant Management"
+1. From the tenant-owner dashboard, navigate to "Tenant Management"
 2. Click the "Create Tenant" button
 3. Fill in the required tenant information:
    - Tenant Name (required)

@@ -263,7 +263,7 @@ const AdminChatList = ({ refreshing: externalRefreshing, onRefresh: externalOnRe
             <Image source={{ uri: item.profileImage }} style={styles.avatar} />
           ) : (
             <View style={[styles.avatarFallback, { 
-              backgroundColor: item.role === 'super-admin' ? '#8B5CF6' : '#3B82F6' 
+              backgroundColor: item.role === 'tenant-owner' ? '#8B5CF6' : '#3B82F6' 
             }]}>
               <Text style={styles.avatarText}>
                 {item.name.charAt(0).toUpperCase()}
@@ -292,11 +292,11 @@ const AdminChatList = ({ refreshing: externalRefreshing, onRefresh: externalOnRe
               <Text style={[
                 styles.roleBadge,
                 { 
-                  backgroundColor: item.role === 'super-admin' ? '#8B5CF680' : '#3B82F680',
+                  backgroundColor: item.role === 'tenant-owner' ? '#8B5CF680' : '#3B82F680',
                   color: '#FFFFFF'
                 }
               ]}>
-                {item.role === 'super-admin' ? 'SUPER' : 'ADMIN'}
+                {item.role === 'tenant-owner' ? 'OWNER' : 'ADMIN'}
               </Text>
             </View>
             

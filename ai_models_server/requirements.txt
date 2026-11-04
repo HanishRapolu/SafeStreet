@@ -10,6 +10,7 @@ python-dotenv==1.0.0
 requests==2.31.0
 scikit-learn==1.4.2
 seaborn==0.13.2
+setuptools==69.5.1
 torch==2.5.1
 torchvision==0.20.1
 tqdm==4.65.0

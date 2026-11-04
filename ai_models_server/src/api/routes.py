@@ -9,7 +9,8 @@ from .handlers import (
     handle_yolo_detection_endpoint,
     handle_road_classification_endpoint,
     handle_yolo_info_endpoint,
-    handle_models_status_endpoint
+    handle_models_status_endpoint,
+    handle_analyze_endpoint
 )
 from ..core.config import UPLOAD_FOLDER
 
@@ -61,3 +62,8 @@ def register_routes(app):
     @app.route("/models-status", methods=["GET"])
     def models_status():
         return handle_models_status_endpoint()
+
+    # Unified Analysis endpoint (Road classifier + YOLOv8)
+    @app.route("/analyze", methods=["POST", "OPTIONS"])
+    def analyze():
+        return handle_analyze_endpoint()

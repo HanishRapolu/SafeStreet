@@ -14,11 +14,13 @@ const {
   getFieldWorkerAiReports
 } = require('../controllers/fieldWorkerDamageController');
 const { getReportImage } = require('../controllers/damageController');
+const { analyzeImage } = require('../controllers/aiModelController');
 const { protectFieldWorker } = require('../middleware/fieldWorkerAuthMiddleware');
 const multer = require('multer');
 
 // Configure multer for file uploads
 const storage = multer.memoryStorage();
+const upload10MB = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
 const upload = multer({ 
   storage: storage,
   limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
@@ -33,6 +35,7 @@ const upload = multer({
 const router = express.Router();
 
 // Protected field worker routes
+router.post('/analyze', protectFieldWorker, upload10MB.single('image'), analyzeImage);
 
 // Dashboard and analytics endpoints
 router.get('/dashboard', protectFieldWorker, getFieldWorkerDashboard);

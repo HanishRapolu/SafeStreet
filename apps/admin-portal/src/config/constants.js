@@ -2,7 +2,8 @@
 export const DRAWER_WIDTH = 270;
 
 // API
-export const API_BASE_URL = 'https://safestreets-backend.onrender.com/api';
+export const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5030/api';
+export const SOCKET_URL = process.env.REACT_APP_SOCKET_URL || process.env.REACT_APP_BACKEND_URL || (process.env.REACT_APP_API_URL ? process.env.REACT_APP_API_URL.replace(/\/api\/?$/, '') : 'http://localhost:5030');
 export const API_ENDPOINTS = {
   DAMAGE_REPORTS: '/damage',
   REPAIRS: '/repairs',
@@ -10,10 +11,10 @@ export const API_ENDPOINTS = {
   AUTH: '/admin/auth',
   PROFILE: '/admin/profile',
   ADMIN: '/admin',
+  TEAM: '/admin/team',
   USERS: '/users',
   FIELD_WORKERS: '/field/workers',
   IMAGES: '/images',
-  TENANTS: '/admin/tenants',
   AI: '/ai',
 };
 

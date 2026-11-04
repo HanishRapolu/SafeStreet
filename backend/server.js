@@ -8,6 +8,7 @@ const { getRedisClient } = require('./utils/redisClient');
 const SocketManager = require('./utils/socketManager');
 const adminRoutes = require('./routes/adminRoutes');
 const adminProfileRoutes = require('./routes/adminProfileRoutes');
+const teamRoutes = require('./routes/teamRoutes');
 const imageRoutes = require('./routes/ImageRoutes');
 const fieldWorkerRoutes = require('./routes/fieldRoutes');
 const fieldWorkerAuthRoutes = require('./routes/fieldWorkerAuthRoutes');
@@ -15,17 +16,21 @@ const fieldWorkerDamageRoutes = require('./routes/fieldWorkerDamageRoutes');
 const fieldWorkerNotificationRoutes = require('./routes/fieldWorkerNotificationRoutes');
 const weatherRoutes = require('./routes/weatherRoutes');
 const damageRoutes = require('./routes/damageRoutes');
-const tenantRoutes = require('./routes/tenantRoutes');
 const aiRoutes = require('./routes/aiRoutes');
 const chatRoutes = require('./routes/chatRoutes');
 const fieldWorkerChatRoutes = require('./routes/fieldWorkerChatRoutes');
 const adminAiChatRoutes = require('./routes/adminAiChatRoutes');
 const fieldWorkerAiChatRoutes = require('./routes/fieldWorkerAiChatRoutes');
-const accessRequestRoutes = require('./routes/accessRequestRoutes');
+const emailRoutes = require('./routes/emailRoutes');
 const path = require('path');
 
 dotenv.config();
 connectDB();
+
+// Check Gemini API key
+if (!process.env.GEMINI_API_KEY) {
+  console.warn('⚠️ WARNING: GEMINI_API_KEY is not set. Gemini AI features will use fallback modes.');
+}
 
 // Initialize Redis connection
 if (process.env.REDIS_ENABLED === 'true') getRedisClient().catch(err => {
@@ -74,16 +79,14 @@ app.use('/api/fieldworker/chat', fieldWorkerChatRoutes);
 
 app.use('/api/admin/auth', adminRoutes);
 app.use('/api/admin/profile', adminProfileRoutes);
-app.use('/api/admin/tenants', tenantRoutes);
-app.use('/api/admin', require('./routes/tenantAdminRoutes'));
+app.use('/api/admin/team', teamRoutes);
 app.use('/api/images', imageRoutes);
 app.use('/api/damage', damageRoutes);
 app.use('/api/ai', aiRoutes);
 app.use('/api/chat', chatRoutes);
 app.use('/api/admin/ai-chat', adminAiChatRoutes);
 app.use('/api/fieldworker/ai-chat', fieldWorkerAiChatRoutes);
-app.use('/api/access-requests', accessRequestRoutes);
-app.use('/api/admin', require('./routes/emailRoutes'));
+app.use('/api/admin', emailRoutes);
 
 const PORT = process.env.PORT || 5030;
 server.listen(PORT, '0.0.0.0', () => console.log(`🚀 Server running on port ${PORT}`));

@@ -25,52 +25,11 @@ import RepairIcon from '@mui/icons-material/Build';
 import HistoryIcon from '@mui/icons-material/History';
 import LogoutIcon from '@mui/icons-material/ExitToApp';
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
-import BusinessIcon from '@mui/icons-material/Business';
-import RequestPageIcon from '@mui/icons-material/RequestPage';
+import GroupIcon from '@mui/icons-material/Group';
 import { DRAWER_WIDTH } from '../../config/constants';
 
-// Super admin menu items
-const superAdminMenuItems = [
-  { 
-    text: 'Dashboard', 
-    icon: <DashboardIcon />, 
-    path: '/dashboard', 
-    badge: null,
-  },
-  {
-    text: 'Tenant Management',
-    icon: <BusinessIcon />,
-    path: '/tenants',
-    badge: null,
-  },
-  {
-    text: 'Access Requests',
-    icon: <RequestPageIcon />,
-    path: '/access-requests',
-    badge: 'New',
-  },
-  { 
-    text: 'All Reports', 
-    icon: <ReportIcon />, 
-    path: '/reports', 
-    badge: null,
-  },
-  { 
-    text: 'AI Analysis', 
-    icon: <AutoAwesomeIcon />, 
-    path: '/ai-analysis', 
-    badge: 'AI',
-  },
-  {
-    text: 'AI Assistant',
-    icon: <AutoAwesomeIcon />,
-    path: '/ai-chat',
-    badge: 'Gemini',
-  }
-];
-
-// Regular admin menu items
-const regularMenuItems = [
+// Portal menu items
+const menuItems = [
   { 
     text: 'Dashboard', 
     icon: <DashboardIcon />, 
@@ -81,7 +40,13 @@ const regularMenuItems = [
     text: 'Damage Reports', 
     icon: <ReportIcon />, 
     path: '/reports', 
-    badge: 12,
+    badge: null,
+  },
+  {
+    text: 'Team',
+    icon: <GroupIcon />, 
+    path: '/team',
+    badge: null,
   },
   { 
     text: 'Map View', 
@@ -99,7 +64,7 @@ const regularMenuItems = [
     text: 'Repair Management', 
     icon: <RepairIcon />, 
     path: '/repairs', 
-    badge: 5,
+    badge: null,
   },
   { 
     text: 'Historical Analysis', 
@@ -210,7 +175,7 @@ const Sidebar = ({ mobileOpen, onDrawerToggle, onLogout }) => {
         </Typography>
         
         <List sx={{ p: 0 }}>
-          {(userRole === 'super-admin' ? superAdminMenuItems : regularMenuItems)
+          {menuItems
             .map((item) => {
               const isSelected = location.pathname === item.path;
               return (

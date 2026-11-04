@@ -3,22 +3,16 @@ const mongoose = require('mongoose');
 const chatRoomSchema = new mongoose.Schema({
   roomType: {
     type: String,
-    enum: ['admin_tenant', 'admin_fieldworker'],
-    default: 'admin_tenant',
+    enum: ['admin_fieldworker'],
+    default: 'admin_fieldworker',
     required: true
   },
   tenantId: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'Tenant',
-    required: function() {
-      return this.roomType === 'admin_tenant';
-    }
+    ref: 'Tenant'
   },
   tenantName: {
-    type: String,
-    required: function() {
-      return this.roomType === 'admin_tenant';
-    }
+    type: String
   },
   participants: [{
     userId: {
@@ -29,12 +23,12 @@ const chatRoomSchema = new mongoose.Schema({
     userModel: {
       type: String,
       required: true,
-      enum: ['Admin', 'Tenant', 'FieldWorker']
+      enum: ['Admin', 'FieldWorker']
     },
     name: String,
     role: {
       type: String,
-      enum: ['super_admin', 'tenant_admin', 'admin', 'field_worker']
+      enum: ['tenant-owner', 'admin', 'field_worker']
     },
     lastSeen: {
       type: Date,
@@ -48,14 +42,8 @@ const chatRoomSchema = new mongoose.Schema({
     timestamp: Date
   },
   unreadCount: {
-    superAdmin: {
-      type: Number,
-      default: 0
-    },
-    tenantAdmin: {
-      type: Number,
-      default: 0
-    }
+    type: Number,
+    default: 0
   },
   isActive: {
     type: Boolean,
