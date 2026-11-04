@@ -8,6 +8,7 @@ dotenv.config();
 
 const Admin = require('../models/Admin');
 const Tenant = require('../models/Tenant');
+const FieldWorker = require('../models/FieldWorker');
 
 async function seedOwner() {
   const mongoUri = process.env.MONGO_URI || process.env.MONGODB_URI || 'mongodb://localhost:27017/safestreets';
@@ -57,6 +58,29 @@ async function seedOwner() {
       owner.password = ownerPassword; // Pre-save hook will hash modified password
       await owner.save();
       console.log(`✅ Updated existing user ${owner.email} to tenant-owner (${owner._id})`);
+    }
+
+    // 3. Upsert Default Field Worker (for mobile app login)
+    const workerEmail = process.env.WORKER_EMAIL || 'worker@safestreets.com';
+    const workerPassword = process.env.WORKER_PASSWORD || 'workerpassword123';
+
+    let worker = await FieldWorker.findOne({ email: workerEmail });
+    if (!worker) {
+      worker = await FieldWorker.create({
+        name: 'Default Field Worker',
+        workerId: 'W-DEFAULT',
+        email: workerEmail,
+        password: workerPassword,
+        specialization: 'Road Surface & Pothole Repair',
+        region: 'Central District',
+        tenant: defaultTenant._id
+      });
+      console.log(`✅ Created default field-worker: ${worker.email} (${worker._id})`);
+    } else {
+      worker.tenant = defaultTenant._id;
+      worker.password = workerPassword;
+      await worker.save();
+      console.log(`✅ Updated existing field-worker: ${worker.email} (${worker._id})`);
     }
 
     console.log('🎉 Seeding completed successfully.');

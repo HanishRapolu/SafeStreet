@@ -78,12 +78,13 @@ Credentials and seed values are managed in `backend/.env` (mirrored in `backend/
 - Created by the Tenant Owner via the Admin Portal **Team** page or via the API:
   - `POST /api/admin/team/admins` (Bearer Token: Owner)
 
-### Field Workers
-- Created by Owner or Admin via the Admin Portal **Team** page or via the API:
-  - `POST /api/admin/team/field-workers`
-- Auto-generates:
-  - Email: `<workerId>@safestreets.com`
-  - Password: `<workerId><4-digit-pin>` (returned in API response and displayed in UI)
+### Field Workers (Mobile App)
+- **Default Seeded Worker:**
+  - **Email:** `worker@safestreets.com` (configured via `WORKER_EMAIL` in `.env`)
+  - **Password:** `workerpassword123` (configured via `WORKER_PASSWORD` in `.env`)
+- **Custom Workers:**
+  - Created by Owner or Admin via the Admin Portal **Team** page or via `POST /api/admin/team/field-workers`
+  - Auto-generated: Email `<workerId>@safestreets.com`, password displayed upon creation.
 
 ---
 
