@@ -1,0 +1,59 @@
+{
+  "expo": {
+    "name": "user-app",
+    "slug": "user-app",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/road.png",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "jsEngine": "hermes",
+      "bundleIdentifier": "com.safestreets.userapp",
+      "infoPlist": {
+        "NSCameraUsageDescription": "Allow $(PRODUCT_NAME) to access your camera",
+        "ITSAppUsesNonExemptEncryption": false
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/road.png",
+        "backgroundColor": "#ffffff"
+      },
+      "jsEngine": "hermes",
+      "package": "com.safestreets.userapp",
+      "googleServicesFile": "./google-services.json"
+    },
+    "web": {
+      "favicon": "./assets/road.png"
+    },
+    "plugins": [
+      "react-native-vision-camera",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/notification-icon.png",
+          "color": "#ffffff",
+          "sounds": [
+            "./assets/notification-sound.wav"
+          ]
+        }
+      ]
+    ],
+    "updates": {
+      "fallbackToCacheTimeout": 0,
+      "checkAutomatically": "ON_LOAD"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "5efc6edd-3d82-49ff-8c4e-f6e467251211"
+      }
+    }
+  }
+}
